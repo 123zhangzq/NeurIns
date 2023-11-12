@@ -8,7 +8,7 @@ import torch.distributed as dist
 from tensorboard_logger import Logger as TbLogger
 import random
 
-from utils import clip_grad_norms, rotate_tensor
+from utils.utils import clip_grad_norms, rotate_tensor
 from nets.actor_network import Actor
 from nets.critic_network import Critic
 from utils import torch_load_cpu, get_inner_model, move_to, move_to_cuda
