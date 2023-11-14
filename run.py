@@ -80,7 +80,7 @@ def run(opts):
             agent.opts.epoch_start = epoch_resume + 1
     
         # Start the actual training loop
-        agent.start_training(problem, opts.val_dataset, tb_logger)
+        agent.start_training(problem, opts.train_dataset, opts.val_dataset, tb_logger)
             
 
 

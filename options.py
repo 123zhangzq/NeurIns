@@ -17,6 +17,8 @@ def get_options(args=None):
     parser.add_argument('--use_assert', action='store_true', help='enable assertion')
     parser.add_argument('--no_DDP', action='store_true', help='disable distributed parallel')
     parser.add_argument('--seed', type=int, default=1234, help='random seed to use')
+    parser.add_argument('--train_dataset', type=str, help='dataset file path for training')
+
     
     
     # N2S parameters

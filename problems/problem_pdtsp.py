@@ -224,13 +224,15 @@ class PDPDataset(Dataset):
             self.data = [self.make_instance(args) for args in data[offset:offset+num_samples]]
 
         else:
-            self.data = [{
-                    'loc': torch.FloatTensor(self.size, 2).uniform_(0, 1),
-                    'depot': torch.FloatTensor(2).uniform_(0, 1)} for i in range(num_samples)]
+            assert filename is not None, 'filename should not be None, please give the path for training dataset'
+
+            # self.data = [{
+            #         'loc': torch.FloatTensor(self.size, 2).uniform_(0, 1),
+            #         'depot': torch.FloatTensor(2).uniform_(0, 1)} for i in range(num_samples)]
         
         self.N = len(self.data)
         
-        # calculate distance matrix
+        # prepare the training instances
         for i, instance in enumerate(self.data):
             self.data[i]['coordinates'] = torch.cat((instance['depot'].reshape(1, 2), instance['loc']),dim=0)
             del self.data[i]['depot']
@@ -238,13 +240,15 @@ class PDPDataset(Dataset):
         print(f'{self.N} instances initialized.')
     
     def make_instance(self, args):
-        depot, loc, *args = args
-        grid_size = 1
+        depot, loc, sol_static, dynamic_loc, *args = args
+
         if len(args) > 0:
-            depot_types, customer_types, grid_size = args
+            temp = args
         return {
-            'loc': torch.tensor(loc, dtype=torch.float) / grid_size,
-            'depot': torch.tensor(depot, dtype=torch.float) / grid_size}
+            'loc': torch.tensor(loc, dtype=torch.float),
+            'depot': torch.tensor(depot, dtype=torch.float),
+            'sol_static': torch.tensor(sol_static, dtype=torch.int),
+            'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float)}
     
     def calculate_distance(self, data):
         N_data = data.shape[0]

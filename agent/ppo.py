@@ -193,14 +193,14 @@ class PPO:
         else:
             validate(0, problem, self, val_dataset, tb_logger, distributed = False)
             
-    def start_training(self, problem, val_dataset, tb_logger):
+    def start_training(self, problem, train_dataset, val_dataset, tb_logger):
         if self.opts.distributed:
-            mp.spawn(train, nprocs=self.opts.world_size, args=(problem, self, val_dataset, tb_logger))
+            mp.spawn(train, nprocs=self.opts.world_size, args=(problem, self, train_dataset, val_dataset, tb_logger))
         else:
-            train(0, problem, self, val_dataset, tb_logger)
+            train(0, problem, self, train_dataset, val_dataset, tb_logger)
 
             
-def train(rank, problem, agent, val_dataset, tb_logger):
+def train(rank, problem, agent, train_dataset, val_dataset, tb_logger):
     
     opts = agent.opts  
 
@@ -250,7 +250,7 @@ def train(rank, problem, agent, val_dataset, tb_logger):
             print("Training with actor lr={:.3e} critic lr={:.3e} for run {}".format(agent.optimizer.param_groups[0]['lr'], 
                                                                                  agent.optimizer.param_groups[1]['lr'], opts.run_name) , flush=True)
         # prepare training data
-        training_dataset = problem.make_dataset(size=opts.graph_size, num_samples=opts.epoch_size)
+        training_dataset = problem.make_dataset(size=opts.graph_size, num_samples=opts.epoch_size,filename=train_dataset)
         if opts.distributed:
             train_sampler = torch.utils.data.distributed.DistributedSampler(training_dataset, shuffle=False)
             training_dataloader = DataLoader(training_dataset, batch_size=opts.batch_size // opts.world_size, shuffle=False,
