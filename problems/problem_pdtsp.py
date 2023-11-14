@@ -96,7 +96,9 @@ class PDTSP(object):
                     rec.scatter_(1,selected_node, next_selected_node)
                     candidates.scatter_(1, next_selected_node, 0)
                     selected_node = next_selected_node
-                    
+
+                cost_ = self.get_costs(batch, rec)
+
                 return rec
                 
             else:
@@ -189,18 +191,23 @@ class PDTSP(object):
         
     
     def get_costs(self, batch, rec):
-        
+
         batch_size, size = rec.size()
-        
+
         # check feasibility
         if self.do_assert:
             self.check_feasibility(rec)
-        
+
         # calculate obj value
         d1 = batch['coordinates'].gather(1, rec.long().unsqueeze(-1).expand(batch_size, size, 2))
         d2 = batch['coordinates']
-        length =  (d1  - d2).norm(p=2, dim=2).sum(1)
-        
+        # not return to depot, so remove the distances from last customer to depot
+        d2_copy = d2.clone()
+        zero_indices = torch.nonzero(rec == 0)[:, 1].view(-1, 1)
+        d2_copy[torch.arange(d1.size(0)).view(-1, 1), zero_indices.view(-1, 1), :] = d1[torch.arange(d1.size(0)).view(-1, 1), zero_indices.view(-1, 1), :]
+
+        length =  (d1  - d2_copy).norm(p=2, dim=2).sum(1)
+
         return length
         
     @staticmethod
