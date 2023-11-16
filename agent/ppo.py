@@ -68,8 +68,7 @@ class PPO:
             [{'params':  self.critic.parameters(), 'lr': opts.lr_critic}])
             
             self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, opts.lr_decay, last_epoch=-1,)
-                
-        
+
         print(f'Distributed: {opts.distributed}')
         if opts.use_cuda and not opts.distributed:
             
@@ -199,6 +198,8 @@ class PPO:
         else:
             train(0, problem, self, train_dataset, val_dataset, tb_logger)
 
+            self.optimizer.state
+
             
 def train(rank, problem, agent, train_dataset, val_dataset, tb_logger):
     
@@ -325,9 +326,9 @@ def train_batch(
     action_record = [torch.zeros((batch_feature.size(0), problem.size//2)) for i in range(problem.size)]
     # print(f"rank {rank}, data from {batch['id'][0]},{batch['id'][1]} , to {batch['id'][-2]},{batch['id'][-1]}")
 
-    # initial solution
-    solution = move_to_cuda(problem.get_initial_solutions(batch),rank) if opts.distributed \
-                        else move_to(problem.get_initial_solutions(batch), opts.device)
+    # initial solution of the static orders
+    solution = move_to_cuda(problem.get_static_solutions(batch),rank) if opts.distributed \
+                        else move_to(problem.get_static_solutions(batch), opts.device)
     obj = problem.get_costs(batch, solution)
     
     # warm_up	

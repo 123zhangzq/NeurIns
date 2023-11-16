@@ -17,7 +17,8 @@ class PDTSP(object):
               ' Do assert:', with_assert,)
     
     def input_feature_encoding(self, batch):
-        return batch['coordinates']
+        return torch.cat([batch['coordinates'], batch['dynamic_loc']], dim=1)
+
     
     def get_visited_order_map(self, visited_time):
         bs, gs = visited_time.size()
@@ -37,7 +38,10 @@ class PDTSP(object):
         mask[torch.arange(bs),:,selected_node.view(-1) + gs // 2] = True
         
         return mask
-    
+
+    def get_static_solutions(self, batch):
+        return batch['sol_static']
+
     def get_initial_solutions(self, batch, val_m = 1):
         
         batch_size = batch['coordinates'].size(0)
@@ -200,13 +204,13 @@ class PDTSP(object):
 
         # calculate obj value
         d1 = batch['coordinates'].gather(1, rec.long().unsqueeze(-1).expand(batch_size, size, 2))
-        d2 = batch['coordinates']
+        d2 = batch['coordinates'].clone()
         # not return to depot, so remove the distances from last customer to depot
-        d2_copy = d2.clone()
         zero_indices = torch.nonzero(rec == 0)[:, 1].view(-1, 1)
-        d2_copy[torch.arange(d1.size(0)).view(-1, 1), zero_indices.view(-1, 1), :] = d1[torch.arange(d1.size(0)).view(-1, 1), zero_indices.view(-1, 1), :]
+        d2[torch.arange(d1.size(0)).view(-1, 1), zero_indices.view(-1, 1), :] = \
+        d1[torch.arange(d1.size(0)).view(-1, 1), zero_indices.view(-1, 1), :]
 
-        length =  (d1  - d2_copy).norm(p=2, dim=2).sum(1)
+        length =  (d1  - d2).norm(p=2, dim=2).sum(1)
 
         return length
         
