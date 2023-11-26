@@ -3,6 +3,7 @@ import math
 import numpy as np
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.nn.functional as F
 
 def get_rotate_mat(theta):
     theta = torch.tensor(theta)
@@ -49,3 +50,8 @@ def clip_grad_norms(param_groups, max_norm=math.inf):
     return grad_norms, grad_norms_clipped
 
 
+def pad_solution(sol, target_size):
+    padded_sol = sol.clone()
+    pad_right = target_size - sol.size(1)
+    padded_sol = F.pad(padded_sol, (0, pad_right), value=0)
+    return padded_sol

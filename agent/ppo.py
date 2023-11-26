@@ -11,7 +11,7 @@ import random
 from utils.utils import clip_grad_norms, rotate_tensor
 from nets.actor_network import Actor
 from nets.critic_network import Critic
-from utils.utils import torch_load_cpu, get_inner_model, move_to, move_to_cuda
+from utils.utils import torch_load_cpu, get_inner_model, move_to, move_to_cuda, pad_solution
 from utils.logger import log_to_tb_train
 from agent.utils import validate
 
@@ -330,8 +330,8 @@ def train_batch(
     solution = move_to_cuda(problem.get_static_solutions(batch),rank) if opts.distributed \
                         else move_to(problem.get_static_solutions(batch), opts.device)
     obj = problem.get_costs(batch, solution)
-    
-    # warm_up	
+
+    # warm_up
     if opts.warm_up:
         agent.eval()
 
@@ -340,7 +340,7 @@ def train_batch(
             # get model output	
             exchange = agent.actor( problem,
                                     batch_feature,
-                                    solution,
+                                    pad_solution(solution, batch_feature.size(1)),
                                     exchange,
                                     action_record,
                                     do_sample = True)[0]
@@ -385,7 +385,7 @@ def train_batch(
             
             exchange, log_lh, _to_critic, entro_p  = agent.actor(problem,
                                                                  batch_feature,
-                                                                 solution,
+                                                                 pad_solution(solution, batch_feature.size(1)),
                                                                  exchange,
                                                                  action_record,
                                                                  do_sample = True,
@@ -536,6 +536,3 @@ def train_batch(
         # end update
         memory.clear_memory()
 
-    
-        
-    
