@@ -9,7 +9,8 @@ def get_options(args=None):
 
     # overall settings
     parser.add_argument('--problem', default='pdtsp', choices = ['pdtsp','pdtspl'], help="The targeted problem to solve, default 'pdp'")
-    parser.add_argument('--graph_size', type=int, default=20, help="T number of customers in the targeted problem (graph size)")
+    parser.add_argument('--graph_size', type=int, default=20, help="The number of customers in the targeted problem (graph size)")
+    parser.add_argument('--sta_orders', type=int, default=7, help="The number of static orders in the targeted problem")
     parser.add_argument('--init_val_met', choices = ['greedy', 'random'], default = 'random', help='method to generate initial solutions for inference')
     parser.add_argument('--no_cuda', action='store_true', help='disable GPUs')
     parser.add_argument('--no_tb', action='store_true', help='disable Tensorboard logging')
@@ -17,7 +18,7 @@ def get_options(args=None):
     parser.add_argument('--use_assert', action='store_true', help='enable assertion')
     parser.add_argument('--no_DDP', action='store_true', help='disable distributed parallel')
     parser.add_argument('--seed', type=int, default=1234, help='random seed to use')
-    parser.add_argument('--train_dataset', type=str, help='dataset file path for training')
+
 
     
     
@@ -45,13 +46,16 @@ def get_options(args=None):
     parser.add_argument('--lr_critic', type=float, default=2e-5, help="learning rate for the critic network")
     parser.add_argument('--lr_decay', type=float, default=0.985, help='learning rate decay per epoch')
     parser.add_argument('--max_grad_norm', type=float, default=0.05, help='maximum L2 norm for gradient clipping')
+
+    parser.add_argument('--train_dataset', type=str, default='./datasets/pdp_7_3.pkl',
+                        help='dataset file path for training')
     
     # Inference and validation parameters
     parser.add_argument('--T_max', type=int, default=1500, help='number of steps for inference')
     parser.add_argument('--eval_only', action='store_true', help='switch to inference mode')
     parser.add_argument('--val_size', type=int, default=1000, help='number of instances for validation/inference')
     parser.add_argument('--val_batch_size', type=int, default=1000, help='Number of instances per batch for validation/inference')
-    parser.add_argument('--val_dataset', type=str, default = './datasets/pdp_20.pkl', help='dataset file path')
+    parser.add_argument('--val_dataset', type=str, default = './datasets/data_7_3_sol.pkl', help='validate dataset file path')
     parser.add_argument('--val_m', type=int, default=1, help='number of data augments in Algorithm 2')
     
 

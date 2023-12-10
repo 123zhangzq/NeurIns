@@ -70,12 +70,12 @@ class Actor(nn.Module):
         trainable_num = sum(p.numel() for p in self.parameters() if p.requires_grad)
         return {'Total': total_num, 'Trainable': trainable_num}
 
-    def forward(self, problem, x_in, solution, exchange, action_record, do_sample = False, fixed_action = None, require_entropy = False, to_critic = False, only_critic  = False):
+    def forward(self, problem, x_in, solution, step_info, exchange, action_record, do_sample = False, fixed_action = None, require_entropy = False, to_critic = False, only_critic  = False):
 
         # the embedded input x
         bs, gs, in_d = x_in.size()
 
-        h_embed, h_pos, visited_time, top2 = self.embedder(x_in, solution, self.clac_stacks)
+        h_embed, h_pos, visited_time, top2 = self.embedder(x_in, solution, step_info, self.clac_stacks)
         
         # pass through encoder
         pos_em = self.pos_encoder(h_pos)
@@ -90,7 +90,8 @@ class Actor(nn.Module):
         # pass through decoder
         action, log_ll, entropy = self.decoder( problem,
                                                 h_em, 
-                                                solution, 
+                                                solution,
+                                                step_info,
                                                 x_in,
                                                 top2,
                                                 visited_order_map, 

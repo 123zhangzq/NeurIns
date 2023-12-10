@@ -55,6 +55,7 @@ def run(opts):
     # Figure out what's the problem
     problem = load_problem(opts.problem)(
                             p_size = opts.graph_size,
+                            sta_orders = opts.sta_orders,
                             init_val_met = opts.init_val_met,
                             with_assert = opts.use_assert)
     

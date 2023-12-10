@@ -122,8 +122,8 @@ class PPO:
         self.actor.train()
         if not self.opts.eval_only: self.critic.train()
     
-    def rollout(self, problem, val_m, batch, do_sample = False, show_bar = False):
-        batch = move_to(batch, self.opts.device) # batch_size, graph_size, 2     
+    def rollout(self, problem, val_m, batch, do_sample = False, show_bar = False):     # TODO NOW: 1. get initial solution. 2. data related
+        batch = move_to(batch, self.opts.device) # batch_size, graph_size, 2
         bs, gs, dim = batch['coordinates'].size()
         batch['coordinates'] = batch['coordinates'].unsqueeze(1).repeat(1,val_m,1,1)
         augments = ['Rotate', 'Flip_x-y', 'Flip_x_cor', 'Flip_y_cor']
@@ -171,9 +171,9 @@ class PPO:
                                   do_sample = do_sample)[0]
             
             # new solution
-            solutions, rewards, obj, action_record = problem.step(batch, solutions, exchange, obj, action_record)
+            solutions, rewards, obj = problem.step(batch, solutions, exchange, obj)
 
-            # record informations
+            # record information
             reward.append(rewards)  
             obj_history.append(obj)
             
@@ -329,29 +329,9 @@ def train_batch(
     # initial solution of the static orders
     solution = move_to_cuda(problem.get_static_solutions(batch),rank) if opts.distributed \
                         else move_to(problem.get_static_solutions(batch), opts.device)
-    obj = problem.get_costs(batch, solution)
+    obj = problem.get_costs(batch, solution, flag_finish = False)
+    padded_solution = pad_solution(solution, batch_feature.size(1))
 
-    # warm_up
-    if opts.warm_up:
-        agent.eval()
-
-        for w in range(int(epoch // opts.warm_up)):
-            
-            # get model output	
-            exchange = agent.actor( problem,
-                                    batch_feature,
-                                    pad_solution(solution, batch_feature.size(1)),
-                                    exchange,
-                                    action_record,
-                                    do_sample = True)[0]
-             
-            # state transient	
-            solution, rewards, obj, action_record = problem.step(batch, solution, exchange, obj, action_record)
-            
-        obj = problem.get_costs(batch, solution)
-        
-        agent.train()
-    
     # params for training
     gamma = opts.gamma
     n_step = opts.n_step
@@ -362,9 +342,8 @@ def train_batch(
     initial_cost = obj
     
     # sample trajectory
-    while t < T:
-        
-        t_s = t
+    while t < (problem.static_orders//2):       # TODO NOW: RL algo: 1. REINFORCE with critic 2. PPO
+
         memory.actions.append(exchange)
         
         # data array
@@ -374,51 +353,47 @@ def train_batch(
         entropy = []
         bl_val_detached = []
         bl_val = []
-        
-        while t - t_s < n_step and not (t == T):          
+
             
-            
-            memory.states.append(solution)
-            memory.action_record.append(action_record.copy())
-            
-            # get model output
-            
-            exchange, log_lh, _to_critic, entro_p  = agent.actor(problem,
-                                                                 batch_feature,
-                                                                 pad_solution(solution, batch_feature.size(1)),
-                                                                 exchange,
-                                                                 action_record,
-                                                                 do_sample = True,
-                                                                 require_entropy = True,# take same action
-                                                                 to_critic = True)
-            
-            memory.actions.append(exchange)
-            memory.logprobs.append(log_lh)
-            memory.obj.append(obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))
-            
-                            
-            entropy.append(entro_p.detach().cpu())
-            
-            baseline_val_detached, baseline_val = agent.critic(_to_critic, obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))
-            
-            bl_val_detached.append(baseline_val_detached)
-            bl_val.append(baseline_val)
-                
-            # state transient
-            solution, rewards, obj, action_record = problem.step(batch, solution, exchange, obj, action_record)
-            memory.rewards.append(rewards)
-            # memory.mask_true = memory.mask_true + info['swaped']
-            
-            # store info
-            total_cost = total_cost + obj[:,-1]
-            
-            # next            
-            t = t + 1
-            
-            
+        memory.states.append(solution)
+        memory.action_record.append(action_record.copy())
+
+        # get model output
+        dy_size = problem.size - 2 * problem.static_orders
+        step_info = (dy_size, t)
+        exchange, log_lh, _to_critic, entro_p  = agent.actor(problem,
+                                                             batch_feature,
+                                                             padded_solution,
+                                                             step_info,
+                                                             exchange,
+                                                             action_record,
+                                                             do_sample = True,
+                                                             require_entropy = True,# take same action
+                                                             to_critic = True)
+
+        memory.actions.append(exchange)
+        memory.logprobs.append(log_lh)
+        memory.obj.append(obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))
+
+
+        entropy.append(entro_p.detach().cpu())
+
+        baseline_val_detached, baseline_val = agent.critic(_to_critic, obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))
+
+        bl_val_detached.append(baseline_val_detached)
+        bl_val.append(baseline_val)
+
+        # state transient
+        padded_solution, rewards, obj = problem.step(batch, padded_solution, exchange, obj)
+        memory.rewards.append(rewards)
+        # memory.mask_true = memory.mask_true + info['swaped']
+
         # store info
-        t_time = t - t_s
-        total_cost = total_cost / t_time
+        total_cost = rewards
+
+        # next
+        t = t + 1
+
         
         # begin update        ======================= 
         
@@ -446,7 +421,7 @@ def train_batch(
                 entropy = []
                 bl_val_detached = []
                 bl_val = []
-                
+
                 for tt in range(t_time):
                     # get new action_prob
                     _, log_p, _to_critic, entro_p = agent.actor(problem,
@@ -477,7 +452,7 @@ def train_batch(
             reward_reversed = memory.rewards[::-1]
 
             # estimate return
-            R = agent.critic(agent.actor(problem,batch_feature,solution,exchange,action_record,only_critic = True), obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))[0]
+            R = agent.critic(agent.actor(problem,batch_feature,padded_solution,exchange,only_critic = True), obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))[0]
             for r in range(len(reward_reversed)):
                 R = R * gamma + reward_reversed[r]
                 Reward.append(R)
