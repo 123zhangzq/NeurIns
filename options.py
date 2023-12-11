@@ -39,7 +39,7 @@ def get_options(args=None):
     parser.add_argument('--T_train', type=int, default=250, help='number of itrations for training')
     parser.add_argument('--n_step', type=int, default=5, help='n_step for return estimation')
     parser.add_argument('--warm_up', type=float, default=2, help='hyperparameter of CL scalar $\rho^{CL}$')
-    parser.add_argument('--batch_size', type=int, default=600,help='number of instances per batch during training')
+    parser.add_argument('--batch_size', type=int, default=500,help='number of instances per batch during training')
     parser.add_argument('--epoch_end', type=int, default=200, help='maximum training epoch')
     parser.add_argument('--epoch_size', type=int, default=12000, help='number of instances per epoch during training')
     parser.add_argument('--lr_model', type=float, default=8e-5, help="learning rate for the actor network")

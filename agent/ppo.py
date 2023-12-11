@@ -22,7 +22,7 @@ class Memory:
         self.logprobs = []
         self.rewards = []  
         self.obj = []
-        self.action_record = []
+
         
     def clear_memory(self):
         del self.actions[:]
@@ -30,7 +30,7 @@ class Memory:
         del self.logprobs[:]
         del self.rewards[:]
         del self.obj[:]
-        del self.action_record[:]
+
 
 class PPO:
     def __init__(self, problem_name, size, opts):
@@ -323,7 +323,7 @@ def train_batch(
     exchange = move_to_cuda(torch.tensor([-1,-1,-1]).repeat(batch_size,1), rank) if opts.distributed \
                         else move_to(torch.tensor([-1,-1,-1]).repeat(batch_size,1), opts.device)
     
-    action_record = [torch.zeros((batch_feature.size(0), problem.size//2)) for i in range(problem.size)]
+
     # print(f"rank {rank}, data from {batch['id'][0]},{batch['id'][1]} , to {batch['id'][-2]},{batch['id'][-1]}")
 
     # initial solution of the static orders
@@ -338,42 +338,43 @@ def train_batch(
     T = opts.T_train
     K_epochs = opts.K_epochs
     eps_clip = opts.eps_clip
-    t = 0
+
     initial_cost = obj
     
     # sample trajectory
-    while t < (problem.static_orders//2):       # TODO NOW: RL algo: 1. REINFORCE with critic 2. PPO
 
-        memory.actions.append(exchange)
-        
-        # data array
-        total_cost = 0
-        
-        # for first step
-        entropy = []
-        bl_val_detached = []
-        bl_val = []
+    memory.actions.append(exchange)
 
-            
-        memory.states.append(solution)
-        memory.action_record.append(action_record.copy())
+    # data array
+    total_cost = 0
+
+    # for first step
+    entropy = []
+    bl_val_detached = []
+    bl_val = []
+
+    dy_size = problem.size - 2 * problem.static_orders
+    t = 0
+    while t < (dy_size // 2):
+
+        memory.states.append(padded_solution)
+
 
         # get model output
-        dy_size = problem.size - 2 * problem.static_orders
         step_info = (dy_size, t)
         exchange, log_lh, _to_critic, entro_p  = agent.actor(problem,
                                                              batch_feature,
                                                              padded_solution,
                                                              step_info,
-                                                             exchange,
-                                                             action_record,
                                                              do_sample = True,
                                                              require_entropy = True,# take same action
                                                              to_critic = True)
 
         memory.actions.append(exchange)
         memory.logprobs.append(log_lh)
-        memory.obj.append(obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))
+
+
+        memory.obj.append(obj.unsqueeze(-1))
 
 
         entropy.append(entro_p.detach().cpu())
@@ -389,125 +390,127 @@ def train_batch(
         # memory.mask_true = memory.mask_true + info['swaped']
 
         # store info
-        total_cost = rewards
+        total_cost = total_cost + rewards
 
-        # next
+        # next step
         t = t + 1
+    # store info
+    t_time = dy_size // 2
+    total_cost = total_cost / t_time
 
-        
-        # begin update        ======================= 
-        
-        # convert list to tensor
-        all_actions = torch.stack(memory.actions)
-        old_states = torch.stack(memory.states).detach().view(t_time, batch_size, -1)
-        old_actions = all_actions[1:].view(t_time, -1, 3)
-        old_logprobs = torch.stack(memory.logprobs).detach().view(-1)
-        old_exchange = all_actions[:-1].view(t_time, -1, 3)
-        old_action_records = memory.action_record
-        
-        old_obj = torch.stack(memory.obj)
-        
-        # Optimize ppo policy for K mini-epochs:
-        old_value = None
-        
-        for _k in range(K_epochs):
-            
-            if _k == 0:
-                logprobs = memory.logprobs
-                
-            else:
-                # Evaluating old actions and values :
-                logprobs = []  
-                entropy = []
-                bl_val_detached = []
-                bl_val = []
+    # begin update        =======================
 
-                for tt in range(t_time):
-                    # get new action_prob
-                    _, log_p, _to_critic, entro_p = agent.actor(problem,
-                                                                batch_feature,
-                                                                old_states[tt],
-                                                                old_exchange[tt],
-                                                                old_action_records[tt],
-                                                                fixed_action = old_actions[tt],
-                                                                require_entropy = True,# take same action
-                                                                to_critic = True)
-                    
-                    logprobs.append(log_p)
-                    entropy.append(entro_p.detach().cpu())
-                    
-                    baseline_val_detached, baseline_val = agent.critic(_to_critic, old_obj[tt])
-                    
-                    bl_val_detached.append(baseline_val_detached)
-                    bl_val.append(baseline_val)
-            
-            logprobs = torch.stack(logprobs).view(-1)
-            entropy = torch.stack(entropy).view(-1)
-            bl_val_detached = torch.stack(bl_val_detached).view(-1)
-            bl_val = torch.stack(bl_val).view(-1)
+    # convert list to tensor
+    all_actions = torch.stack(memory.actions)
+    old_states = torch.stack(memory.states).detach().view(t_time, batch_size, -1)
+    old_actions = all_actions[1:].view(t_time, -1, 3)
+    old_logprobs = torch.stack(memory.logprobs).detach().view(-1)
+    old_exchange = all_actions[:-1].view(t_time, -1, 3)
 
 
-            # get traget value for critic
-            Reward = []
-            reward_reversed = memory.rewards[::-1]
+    old_obj = torch.stack(memory.obj)
 
-            # estimate return
-            R = agent.critic(agent.actor(problem,batch_feature,padded_solution,exchange,only_critic = True), obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))[0]
-            for r in range(len(reward_reversed)):
-                R = R * gamma + reward_reversed[r]
-                Reward.append(R)
-            
-            
-            # clip the target:
-            Reward = torch.stack(Reward[::-1], 0) # n_step, bs
-            Reward = Reward.view(-1)
-            
-            # Finding the ratio (pi_theta / pi_theta__old):
-            ratios = torch.exp(logprobs - old_logprobs.detach())
-            
-            # Finding Surrogate Loss:
-            advantages = Reward - bl_val_detached
+    # Optimize ppo policy for K mini-epochs:
+    old_value = None
 
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1-eps_clip, 1+eps_clip) * advantages            
-            reinforce_loss = -torch.min(surr1, surr2).mean()
-            
-            # define baseline loss
-            if old_value is None:
-                baseline_loss = ((bl_val - Reward) ** 2).mean()
-                old_value = bl_val.detach()
-            else:
-                vpredclipped = old_value + torch.clamp(bl_val - old_value, - eps_clip, eps_clip)
-                v_max = torch.max(((bl_val - Reward) ** 2), ((vpredclipped - Reward) ** 2))
-                baseline_loss = v_max.mean()
+    for _k in range(K_epochs):
 
-            # check K-L divergence
-            approx_kl_divergence = (.5 * (old_logprobs.detach() - logprobs) ** 2).mean().detach()
-            approx_kl_divergence[torch.isinf(approx_kl_divergence)] = 0
-            
-            # calculate loss      
-            loss = baseline_loss + reinforce_loss #- 1e-5 * entropy.mean()
-            
-            # update gradient step
-            agent.optimizer.zero_grad()
-            loss.backward()
-            
-            # Clip gradient norm and get (clipped) gradient norms for logging
-            current_step = int(step * T / n_step * K_epochs + (t-1)//n_step * K_epochs  + _k)
-            grad_norms = clip_grad_norms(agent.optimizer.param_groups, opts.max_grad_norm)
-            
-            # perform gradient descent
-            agent.optimizer.step()
+        if _k == 0:
+            logprobs = memory.logprobs
 
-            # Logging to tensorboard            
-            if(not opts.no_tb) and rank == 0:
-                if (current_step + 1) % int(opts.log_step) == 0:
-                    log_to_tb_train(tb_logger, agent, Reward, ratios, bl_val_detached, total_cost, grad_norms, memory.rewards, entropy, approx_kl_divergence,
-                       reinforce_loss, baseline_loss, logprobs, initial_cost, current_step + 1)
-                    
-            if rank == 0: pbar.update(1)     
-        
-        
-        # end update
-        memory.clear_memory()
+        else:
+            # Evaluating old actions and values :
+            logprobs = []
+            entropy = []
+            bl_val_detached = []
+            bl_val = []
+
+            for tt in range(t_time):
+                # get new action_prob
+                step_info_ = (dy_size, tt)
+                _, log_p, _to_critic, entro_p = agent.actor(problem,
+                                                            batch_feature,
+                                                            old_states[tt],
+                                                            step_info_,
+                                                            fixed_action = old_actions[tt],
+                                                            require_entropy = True,# take same action
+                                                            to_critic = True)
+
+                logprobs.append(log_p)
+                entropy.append(entro_p.detach().cpu())
+
+                baseline_val_detached, baseline_val = agent.critic(_to_critic, old_obj[tt])
+
+                bl_val_detached.append(baseline_val_detached)
+                bl_val.append(baseline_val)
+
+        logprobs = torch.stack(logprobs).view(-1)
+        entropy = torch.stack(entropy).view(-1)
+        bl_val_detached = torch.stack(bl_val_detached).view(-1)
+        bl_val = torch.stack(bl_val).view(-1)
+
+
+        # get traget value for critic
+        Reward = []
+        reward_reversed = memory.rewards[::-1]
+
+        # estimate return
+        R = agent.critic(agent.actor(problem,batch_feature,padded_solution,step_info,only_critic = True), obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))[0]
+        for r in range(len(reward_reversed)):
+            R = R * gamma + reward_reversed[r]
+            Reward.append(R)
+
+
+        # clip the target:
+        Reward = torch.stack(Reward[::-1], 0) # n_step, bs
+        Reward = Reward.view(-1)
+
+        # Finding the ratio (pi_theta / pi_theta__old):
+        ratios = torch.exp(logprobs - old_logprobs.detach())
+
+        # Finding Surrogate Loss:
+        advantages = Reward - bl_val_detached
+
+        surr1 = ratios * advantages
+        surr2 = torch.clamp(ratios, 1-eps_clip, 1+eps_clip) * advantages
+        reinforce_loss = -torch.min(surr1, surr2).mean()
+
+        # define baseline loss
+        if old_value is None:
+            baseline_loss = ((bl_val - Reward) ** 2).mean()
+            old_value = bl_val.detach()
+        else:
+            vpredclipped = old_value + torch.clamp(bl_val - old_value, - eps_clip, eps_clip)
+            v_max = torch.max(((bl_val - Reward) ** 2), ((vpredclipped - Reward) ** 2))
+            baseline_loss = v_max.mean()
+
+        # check K-L divergence
+        approx_kl_divergence = (.5 * (old_logprobs.detach() - logprobs) ** 2).mean().detach()
+        approx_kl_divergence[torch.isinf(approx_kl_divergence)] = 0
+
+        # calculate loss
+        loss = baseline_loss + reinforce_loss #- 1e-5 * entropy.mean()
+
+        # update gradient step
+        agent.optimizer.zero_grad()
+        loss.backward()
+
+        # Clip gradient norm and get (clipped) gradient norms for logging
+        current_step = int(step * T / n_step * K_epochs + (t-1)//n_step * K_epochs  + _k)
+        grad_norms = clip_grad_norms(agent.optimizer.param_groups, opts.max_grad_norm)
+
+        # perform gradient descent
+        agent.optimizer.step()
+
+        # Logging to tensorboard
+        if(not opts.no_tb) and rank == 0:
+            if (current_step + 1) % int(opts.log_step) == 0:
+                log_to_tb_train(tb_logger, agent, Reward, ratios, bl_val_detached, total_cost, grad_norms, memory.rewards, entropy, approx_kl_divergence,
+                   reinforce_loss, baseline_loss, logprobs, initial_cost, current_step + 1)
+
+        if rank == 0: pbar.update(1)
+
+
+    # end update
+    memory.clear_memory()
 

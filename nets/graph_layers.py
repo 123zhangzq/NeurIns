@@ -531,7 +531,7 @@ class MultiHeadDecoder(nn.Module):
             param.data.uniform_(-stdv, stdv)
         
         
-    def forward(self, problem, h_em, solutions, step_info, x_in, top2, visited_order_map, pre_action, selection_sig, fixed_action = None, require_entropy = False):
+    def forward(self, problem, h_em, solutions, step_info, x_in, top2, visited_order_map, fixed_action = None, require_entropy = False):
         # size info
         dy_size, dy_t = step_info
 
