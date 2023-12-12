@@ -5,13 +5,13 @@ def log_to_screen(time_used, count_obj_ci, average_diff_obj_ci, count_obj_mm, av
                   batch_size, dataset_size):
     # reward
     print('\n', '-'*60)
-    print('The number of instances not worse than cheapest insertion:'.center(35), '{:<10f} +- {:<10f}'.format(count_obj_ci))
+    print('The number of instances not worse than cheapest insertion:'.center(35), '{:f}s'.format(count_obj_ci))
     print('Avg difference:'.center(35),
-          '{:<10f} +- {:<10f}'.format(average_diff_obj_ci))
+          '{:f}s'.format(average_diff_obj_ci))
     print('The number of instances not worse than math model:'.center(35),
-          '{:<10f} +- {:<10f}'.format(count_obj_mm))
+          '{:f}s'.format(count_obj_mm))
     print('Avg difference:'.center(35),
-          '{:<10f} +- {:<10f}'.format(average_diff_obj_m))
+          '{:f}s'.format(average_diff_obj_m))
 
 
     
