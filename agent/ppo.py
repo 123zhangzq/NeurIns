@@ -126,26 +126,8 @@ class PPO:
         batch = move_to(batch, self.opts.device) # batch_size, graph_size, 2
         bs, gs, dim = batch['coordinates'].size()
         batch['coordinates'] = batch['coordinates'].unsqueeze(1).repeat(1,val_m,1,1)
-        augments = ['Rotate', 'Flip_x-y', 'Flip_x_cor', 'Flip_y_cor']
-        if val_m > 1:
-            for i in range(val_m):
-                random.shuffle(augments)
-                id_ = torch.rand(4)
-                for aug in augments:
-                    if aug == 'Rotate':
-                        batch['coordinates'][:,i] = rotate_tensor(batch['coordinates'][:,i], int(id_[0] * 4 + 1) * 90)
-                    elif aug == 'Flip_x-y':
-                        if int(id_[1] * 2 + 1) == 1:
-                             data = batch['coordinates'][:,i].clone()
-                             batch['coordinates'][:,i,:,0] = data[:,:,1]
-                             batch['coordinates'][:,i,:,1] = data[:,:,0]
-                    elif aug == 'Flip_x_cor':
-                        if int(id_[2] * 2 + 1) == 1:
-                             batch['coordinates'][:,i,:,0] = 1 - batch['coordinates'][:,i,:,0]
-                    elif aug == 'Flip_y_cor':
-                        if int(id_[3] * 2 + 1) == 1:
-                             batch['coordinates'][:,i,:,1] = 1 - batch['coordinates'][:,i,:,1]
-                             
+
+
         batch['coordinates'] =  batch['coordinates'].view(-1, gs, dim)
         solutions = move_to(problem.get_initial_solutions(batch, val_m), self.opts.device).long()
         

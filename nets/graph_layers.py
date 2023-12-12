@@ -584,7 +584,7 @@ class MultiHeadDecoder(nn.Module):
         if TYPE_REINSERTION == 'N2S':
             action_reinsertion_table = torch.tanh(self.compater_reinsertion(h, pos_pickup, pos_delivery, solutions, mask_table)) * self.range
         elif TYPE_REINSERTION == 'random':
-            action_reinsertion_table = torch.ones(bs, gs, gs).to(h_em.device)
+            action_reinsertion_table = torch.ones(bs, gs, gs).to(h_em.device).to(h_em.device)
         else:
             
             # epi-greedy
