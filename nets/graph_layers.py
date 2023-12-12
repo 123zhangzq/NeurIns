@@ -575,7 +575,7 @@ class MultiHeadDecoder(nn.Module):
 
         ############ action1 select dynamic orders
         dy_pos = gs - dy_size + dy_t
-        action_removal = torch.full((bs, 1), fill_value=dy_pos, dtype=torch.long)
+        action_removal = torch.full((bs, 1), fill_value=dy_pos, dtype=torch.long).to(h_em.device)
 
         ############# action2 insert into current routes
         pos_pickup = action_removal.view(-1)
@@ -584,7 +584,7 @@ class MultiHeadDecoder(nn.Module):
         if TYPE_REINSERTION == 'N2S':
             action_reinsertion_table = torch.tanh(self.compater_reinsertion(h, pos_pickup, pos_delivery, solutions, mask_table)) * self.range
         elif TYPE_REINSERTION == 'random':
-            action_reinsertion_table = torch.ones(bs, gs, gs).to(h_em.device).to(h_em.device)
+            action_reinsertion_table = torch.ones(bs, gs, gs).to(h_em.device)
         else:
             
             # epi-greedy
