@@ -302,7 +302,7 @@ class PDPDataset(Dataset):
                 'depot': torch.tensor(depot, dtype=torch.float),
                 'sol_static': torch.tensor(sol_static, dtype=torch.int),
                 'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
-                'ci_boj': torch.tensor(ci_obj, dtype=torch.float),
+                'ci_obj': torch.tensor(ci_obj, dtype=torch.float),
                 'mm_obj': torch.tensor(mm_obj, dtype=torch.float)}
         elif len(args) == 5:
             depot, loc, sol_static, dynamic_loc, ci_obj, *args = args
@@ -313,7 +313,7 @@ class PDPDataset(Dataset):
                 'depot': torch.tensor(depot, dtype=torch.float),
                 'sol_static': torch.tensor(sol_static, dtype=torch.int),
                 'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
-                'ci_boj': torch.tensor(ci_obj, dtype=torch.float)}
+                'ci_obj': torch.tensor(ci_obj, dtype=torch.float)}
         else:
             raise ValueError("The input of the validation datasets is wrong...")
 
