@@ -40,8 +40,8 @@ def get_options(args=None):
     parser.add_argument('--n_step', type=int, default=5, help='n_step for return estimation')
     parser.add_argument('--warm_up', type=float, default=2, help='hyperparameter of CL scalar $\rho^{CL}$')
     parser.add_argument('--batch_size', type=int, default=500,help='number of instances per batch during training')
-    parser.add_argument('--epoch_end', type=int, default=200, help='maximum training epoch')
-    parser.add_argument('--epoch_size', type=int, default=12000, help='number of instances per epoch during training')
+    parser.add_argument('--epoch_end', type=int, default=10000, help='maximum training epoch')
+    parser.add_argument('--epoch_size', type=int, default=10000, help='number of instances per epoch during training')
     parser.add_argument('--lr_model', type=float, default=8e-5, help="learning rate for the actor network")
     parser.add_argument('--lr_critic', type=float, default=2e-5, help="learning rate for the critic network")
     parser.add_argument('--lr_decay', type=float, default=0.985, help='learning rate decay per epoch')
@@ -55,7 +55,7 @@ def get_options(args=None):
     parser.add_argument('--eval_only', action='store_true', help='switch to inference mode')
     parser.add_argument('--val_size', type=int, default=1000, help='number of instances for validation/inference')
     parser.add_argument('--val_batch_size', type=int, default=1000, help='Number of instances per batch for validation/inference')
-    parser.add_argument('--val_dataset', type=str, default = './datasets/data_7_3_sol.pkl', help='validate dataset file path')
+    parser.add_argument('--val_dataset', type=str, default = './datasets/pdp_7_3_val.pkl', help='validate dataset file path')
     parser.add_argument('--val_m', type=int, default=1, help='number of data augments in Algorithm 2')
     
 

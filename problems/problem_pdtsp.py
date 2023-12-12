@@ -245,7 +245,7 @@ class PDTSP(object):
 
 
 class PDPDataset(Dataset):
-    def __init__(self, filename=None, size=20, num_samples=10000, offset=0, distribution=None):
+    def __init__(self, filename=None, size=20, num_samples=10000, offset=0, distribution=None, flag_val=False):
         
         super(PDPDataset, self).__init__()
         
@@ -257,7 +257,11 @@ class PDPDataset(Dataset):
             
             with open(filename, 'rb') as f:
                 data = pickle.load(f)
-            self.data = [self.make_instance(args) for args in data[offset:offset+num_samples]]
+
+            if flag_val:
+                self.data = [self.make_val_instance(args) for args in data[offset:offset+num_samples]]
+            else:
+                self.data = [self.make_instance(args) for args in data[offset:offset+num_samples]]
 
         else:
             assert filename is not None, 'filename should not be None, please give the path for training dataset'
@@ -285,7 +289,34 @@ class PDPDataset(Dataset):
             'depot': torch.tensor(depot, dtype=torch.float),
             'sol_static': torch.tensor(sol_static, dtype=torch.int),
             'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float)}
-    
+
+    def make_val_instance(self, args):
+
+
+        if len(args) == 6:
+            depot, loc, sol_static, dynamic_loc, ci_obj, mm_obj, *args = args
+            if len(args) > 0:
+                temp = args
+            return {
+                'loc': torch.tensor(loc, dtype=torch.float),
+                'depot': torch.tensor(depot, dtype=torch.float),
+                'sol_static': torch.tensor(sol_static, dtype=torch.int),
+                'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
+                'ci_boj': torch.tensor(ci_obj, dtype=torch.float),
+                'mm_obj': torch.tensor(mm_obj, dtype=torch.float)}
+        elif len(args) == 5:
+            depot, loc, sol_static, dynamic_loc, ci_obj, *args = args
+            if len(args) > 0:
+                temp = args
+            return {
+                'loc': torch.tensor(loc, dtype=torch.float),
+                'depot': torch.tensor(depot, dtype=torch.float),
+                'sol_static': torch.tensor(sol_static, dtype=torch.int),
+                'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
+                'ci_boj': torch.tensor(ci_obj, dtype=torch.float)}
+        else:
+            raise ValueError("The input of the validation datasets is wrong...")
+
     def calculate_distance(self, data):
         N_data = data.shape[0]
         dists = torch.zeros((N_data, N_data), dtype=torch.float)

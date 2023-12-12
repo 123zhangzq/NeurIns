@@ -1,34 +1,19 @@
 import torch
 import math
     
-def log_to_screen(time_used, init_value, best_value, reward, costs_history, search_history,
-                  batch_size, dataset_size, T):
+def log_to_screen(time_used, count_obj_ci, average_diff_obj_ci, count_obj_mm, average_diff_obj_m,
+                  batch_size, dataset_size):
     # reward
     print('\n', '-'*60)
-    print('Avg total reward:'.center(35), '{:<10f} +- {:<10f}'.format(
-            reward.sum(1).mean(), torch.std(reward.sum(1)) / math.sqrt(batch_size)))
-    print('Avg step reward:'.center(35), '{:<10f} +- {:<10f}'.format(
-            reward.mean(), torch.std(reward) / math.sqrt(batch_size)))
-            
-    # cost
-    print('-'*60)
-    print('Avg init cost:'.center(35), '{:<10f} +- {:<10f}'.format(
-            init_value.mean(), torch.std(init_value) / math.sqrt(batch_size)))
-    for per in range(500,T,500):
-        cost_ = costs_history[:,per]
-        print(f'Avg cost after T={per} steps:'.center(35), '{:<10f} +- {:<10f}'.format(
-                cost_.mean(), 
-                torch.std(cost_) / math.sqrt(batch_size)))
-    # best cost
-    print('-'*60)
-    
-    for per in range(500,T,500):
-        cost_ = search_history[:,per]
-        print(f'Avg best cost after T={per} steps:'.center(35), '{:<10f} +- {:<10f}'.format(
-                cost_.mean(), 
-                torch.std(cost_) / math.sqrt(batch_size)))
-    print(f'Avg final best cost:'.center(35), '{:<10f} +- {:<10f}'.format(
-                best_value.mean(), torch.std(best_value) / math.sqrt(batch_size)))
+    print('The number of instances not worse than cheapest insertion:'.center(35), '{:<10f} +- {:<10f}'.format(count_obj_ci))
+    print('Avg difference:'.center(35),
+          '{:<10f} +- {:<10f}'.format(average_diff_obj_ci))
+    print('The number of instances not worse than math model:'.center(35),
+          '{:<10f} +- {:<10f}'.format(count_obj_mm))
+    print('Avg difference:'.center(35),
+          '{:<10f} +- {:<10f}'.format(average_diff_obj_m))
+
+
     
     # time
     print('-'*60)

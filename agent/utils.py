@@ -27,9 +27,9 @@ def validate(rank, problem, agent, val_dataset, tb_logger, distributed = False, 
         random.seed(opts.seed)
     agent.eval()
     
-    val_dataset = problem.make_dataset(size=opts.graph_size,
+    val_dataset = problem.make_dataset(filename=opts.val_dataset, size=opts.graph_size,
                                num_samples=opts.val_size,
-                               filename = val_dataset)
+                               flag_val=True)
 
     if distributed and opts.distributed:
         device = torch.device("cuda", rank)
@@ -57,70 +57,51 @@ def validate(rank, problem, agent, val_dataset, tb_logger, distributed = False, 
                                    pin_memory=True)
     
     s_time = time.time()
-    bv = []
-    cost_hist = []
-    best_hist = []
-    r = []
+
     for batch in tqdm(val_dataloader, desc = 'inference', bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'):
-        bv_, cost_hist_, best_hist_, r_ = agent.rollout(problem,
-                                                        opts.val_m,
-                                                        batch,
-                                                        do_sample = True,
-                                                        show_bar = rank==0)
-        bv.append(bv_)
-        cost_hist.append(cost_hist_)
-        best_hist.append(best_hist_)
-        r.append(r_)
-    bv = torch.cat(bv, 0)
-    cost_hist = torch.cat(cost_hist, 0)
-    best_hist = torch.cat(best_hist, 0)
-    r = torch.cat(r, 0)
+        padded_solution, final_obj, bool_obj_ci, count_obj_ci, average_diff_obj_ci, bool_obj_mm, count_obj_mm, average_diff_obj_mm = agent.rollout(problem,batch, do_sample = True, show_bar = rank==0)
+
+
         
     if distributed and opts.distributed: dist.barrier()
     
     if distributed and opts.distributed:
-        initial_cost = gather_tensor_and_concat(cost_hist[:,0].contiguous())
-        time_used = gather_tensor_and_concat(torch.tensor([time.time() - s_time]).cuda())
-        bv = gather_tensor_and_concat(bv.contiguous())
-        costs_history = gather_tensor_and_concat(cost_hist.contiguous())
-        search_history = gather_tensor_and_concat(best_hist.contiguous())
-        reward = gather_tensor_and_concat(r.contiguous())
+        # initial_cost = gather_tensor_and_concat(cost_hist[:,0].contiguous())
+        # time_used = gather_tensor_and_concat(torch.tensor([time.time() - s_time]).cuda())
+        # bv = gather_tensor_and_concat(bv.contiguous())
+        # costs_history = gather_tensor_and_concat(cost_hist.contiguous())
+        # search_history = gather_tensor_and_concat(best_hist.contiguous())
+        # reward = gather_tensor_and_concat(r.contiguous())
+        pass
     
     else:
-        initial_cost = cost_hist[:,0] # bs
+
         time_used = torch.tensor([time.time() - s_time]) # bs
-        bv = bv
-        costs_history = cost_hist
-        search_history = best_hist
-        reward = r
+
         
     if distributed and opts.distributed: dist.barrier()
         
     # log to screen  
     if rank == 0: log_to_screen(time_used, 
-                                  initial_cost, 
-                                  bv, 
-                                  reward, 
-                                  costs_history,
-                                  search_history,
-                                  batch_size = opts.val_size, 
-                                  dataset_size = len(val_dataset), 
-                                  T = opts.T_max)
+                                  count_obj_ci, average_diff_obj_ci, count_obj_mm, average_diff_obj_mm,
+                                  batch_size = opts.val_size,
+                                  dataset_size = len(val_dataset)
+                                  )
     
     # log to tb
-    if(not opts.no_tb) and rank == 0:
-        log_to_tb_val(tb_logger,
-                      time_used, 
-                      initial_cost, 
-                      bv, 
-                      reward, 
-                      costs_history,
-                      search_history,
-                      batch_size = opts.val_size,
-                      val_size =  opts.val_size,
-                      dataset_size = len(val_dataset), 
-                      T = opts.T_max,
-                      epoch = _id)
+    # if(not opts.no_tb) and rank == 0:
+    #     log_to_tb_val(tb_logger,
+    #                   time_used,
+    #                   initial_cost,
+    #                   bv,
+    #                   reward,
+    #                   costs_history,
+    #                   search_history,
+    #                   batch_size = opts.val_size,
+    #                   val_size =  opts.val_size,
+    #                   dataset_size = len(val_dataset),
+    #                   T = opts.T_max,
+    #                   epoch = _id)
     
     if distributed and opts.distributed: dist.barrier()
     

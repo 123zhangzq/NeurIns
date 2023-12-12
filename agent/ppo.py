@@ -122,47 +122,59 @@ class PPO:
         self.actor.train()
         if not self.opts.eval_only: self.critic.train()
     
-    def rollout(self, problem, val_m, batch, do_sample = False, show_bar = False):     # TODO NOW: 1. get initial solution. 2. data related
+    def rollout(self, problem, batch, do_sample = False, show_bar = False):     # TODO NOW: 1. get initial solution. 2. data related
         batch = move_to(batch, self.opts.device) # batch_size, graph_size, 2
         bs, gs, dim = batch['coordinates'].size()
-        batch['coordinates'] = batch['coordinates'].unsqueeze(1).repeat(1,val_m,1,1)
 
-
-        batch['coordinates'] =  batch['coordinates'].view(-1, gs, dim)
-        solutions = move_to(problem.get_initial_solutions(batch, val_m), self.opts.device).long()
-        
-        obj = problem.get_costs(batch, solutions)
-        
-        obj_history = [torch.cat((obj[:,None],obj[:,None]),-1)]
-        reward = []
 
         batch_feature = problem.input_feature_encoding(batch)
 
-        exchange = None
-        action_record = [torch.zeros((batch_feature.size(0), problem.size//2)) for i in range(problem.size//2)]
-        
+        solutions = move_to(problem.get_static_solutions(batch), self.opts.device).long()
+        obj = problem.get_costs(batch, solutions, flag_finish=False)
+        padded_solution = pad_solution(solutions, batch_feature.size(1))
 
-        for t in tqdm(range(self.opts.T_max), disable = self.opts.no_progress_bar or not show_bar, desc = 'rollout', bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'):       
-            
+        reward = []
+
+        dy_size = problem.size - 2 * problem.static_orders
+        for t in tqdm(range(dy_size // 2), disable = self.opts.no_progress_bar or not show_bar, desc = 'rollout', bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'):
+            step_info = (dy_size, t)
             # pass through model
             exchange = self.actor(problem,
                                   batch_feature,
-                                  solutions,
-                                  exchange,
-                                  action_record,
+                                  padded_solution,
+                                  step_info,
                                   do_sample = do_sample)[0]
-            
-            # new solution
-            solutions, rewards, obj = problem.step(batch, solutions, exchange, obj)
 
-            # record information
-            reward.append(rewards)  
-            obj_history.append(obj)
-            
-        out = (obj[:,-1].reshape(bs, val_m).min(1)[0], # batch_size, 1
-               torch.stack(obj_history,1)[:,:,0].view(bs, val_m, -1).min(1)[0],  # batch_size, T
-               torch.stack(obj_history,1)[:,:,-1].view(bs, val_m, -1).min(1)[0],  # batch_size, T
-               torch.stack(reward,1).view(bs, val_m, -1).max(1)[0], # batch_size, T
+            # new solution
+            padded_solution, rewards, obj = problem.step(batch, padded_solution, exchange, obj)
+
+
+
+
+        # statistic
+        final_obj = obj.view(-1)
+        cheapest_ins_obj = batch['ci_obj'].view(-1)
+        mm_obj = batch['mm_obj'].view(-1)
+
+        bool_obj_ci = final_obj.view(-1, 1) < cheapest_ins_obj.view(-1, 1)
+        bool_obj_mm = final_obj.view(-1, 1) < mm_obj.view(-1, 1)
+        count_obj_ci = torch.sum(final_obj <= cheapest_ins_obj)
+        count_obj_mm = torch.sum(final_obj <= mm_obj)
+
+        sum_diff_obj_ci = torch.sum(final_obj - cheapest_ins_obj)
+        average_diff_obj_ci = sum_diff_obj_ci / final_obj.size(0)
+        sum_diff_obj_mm = torch.sum(final_obj - mm_obj)
+        average_diff_obj_mm = sum_diff_obj_mm / final_obj.size(0)
+
+
+        out = (padded_solution, # bs, gs
+               final_obj, # batch_size, 1
+               bool_obj_ci,  # batch_size, 1
+               count_obj_ci, # 1
+               average_diff_obj_ci,  # 1
+               bool_obj_mm,
+               count_obj_mm,
+               average_diff_obj_mm
                )
         
         return out
