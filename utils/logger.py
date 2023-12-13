@@ -27,7 +27,7 @@ def log_to_screen_and_file(time_used, count_obj_ci, average_diff_obj_ci, count_o
     # reward
     with open(output_file_path, 'a') as file:
         file.write('\n' + '-'*60 + '\n')
-        file.write(epoch)
+        file.write(str(epoch))
         file.write('The number of instances not worse than cheapest insertion:'.center(35) + '{:f}\n'.format(count_obj_ci))
         file.write('Avg difference:'.center(35) + '{:f}\n'.format(average_diff_obj_ci))
         file.write('The number of instances not worse than math model:'.center(35) + '{:f}\n'.format(count_obj_mm))
