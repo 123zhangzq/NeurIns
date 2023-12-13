@@ -85,7 +85,7 @@ def validate(rank, problem, agent, val_dataset, tb_logger, distributed = False, 
     if rank == 0: log_to_screen_and_file(time_used,
                                   count_obj_ci, average_diff_obj_ci, count_obj_mm, average_diff_obj_mm,
                                   batch_size = opts.val_size,
-                                  dataset_size = len(val_dataset),output_file_path='./print.txt')
+                                  dataset_size = len(val_dataset),output_file_path='./print.txt', epoch = _id)
     
     # log to tb
     # if(not opts.no_tb) and rank == 0:

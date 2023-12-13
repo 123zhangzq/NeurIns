@@ -23,14 +23,15 @@ def log_to_screen(time_used, count_obj_ci, average_diff_obj_ci, count_obj_mm, av
 
 
 def log_to_screen_and_file(time_used, count_obj_ci, average_diff_obj_ci, count_obj_mm, average_diff_obj_m,
-                           batch_size, dataset_size, output_file_path):
+                           batch_size, dataset_size, output_file_path, epoch):
     # reward
     with open(output_file_path, 'a') as file:
         file.write('\n' + '-'*60 + '\n')
-        file.write('The number of instances not worse than cheapest insertion:'.center(35) + '{:f}s\n'.format(count_obj_ci))
-        file.write('Avg difference:'.center(35) + '{:f}s\n'.format(average_diff_obj_ci))
-        file.write('The number of instances not worse than math model:'.center(35) + '{:f}s\n'.format(count_obj_mm))
-        file.write('Avg difference:'.center(35) + '{:f}s\n'.format(average_diff_obj_m))
+        file.write(epoch)
+        file.write('The number of instances not worse than cheapest insertion:'.center(35) + '{:f}\n'.format(count_obj_ci))
+        file.write('Avg difference:'.center(35) + '{:f}\n'.format(average_diff_obj_ci))
+        file.write('The number of instances not worse than math model:'.center(35) + '{:f}\n'.format(count_obj_mm))
+        file.write('Avg difference:'.center(35) + '{:f}\n'.format(average_diff_obj_m))
 
         # time
         file.write('-'*60 + '\n')
