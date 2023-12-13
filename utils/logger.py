@@ -41,12 +41,12 @@ def log_to_screen_and_file(time_used, count_obj_ci, average_diff_obj_ci, count_o
 
     # Output to screen
     print('\n', '-'*60)
-    print('The number of instances not worse than cheapest insertion:'.center(35), '{:f}s'.format(count_obj_ci))
-    print('Avg difference:'.center(35), '{:f}s'.format(average_diff_obj_ci))
-    print('The number of instances not worse than math model:'.center(35), '{:f}s'.format(count_obj_mm))
-    print('Avg difference:'.center(35), '{:f}s'.format(average_diff_obj_m))
+    print('The number of instances not worse than cheapest insertion:'.center(35), '{:f}'.format(count_obj_ci))
+    print('Avg difference:'.center(35), '{:f}'.format(average_diff_obj_ci))
+    print('The number of instances not worse than math model:'.center(35), '{:f}'.format(count_obj_mm))
+    print('Avg difference:'.center(35), '{:f}'.format(average_diff_obj_m))
     print('-'*60)
-    print('Avg used time:'.center(35), '{:f}s'.format(time_used.mean() / dataset_size))
+    print('Avg used time:'.center(35), '{:f}'.format(time_used.mean() / dataset_size))
     print('-'*60, '\n')
 
 
