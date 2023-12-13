@@ -4,7 +4,7 @@ import time
 import torch
 import os
 from tqdm import tqdm
-from utils.logger import log_to_screen, log_to_tb_val
+from utils.logger import log_to_screen, log_to_tb_val, log_to_screen_and_file
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 from tensorboard_logger import Logger as TbLogger
@@ -82,7 +82,7 @@ def validate(rank, problem, agent, val_dataset, tb_logger, distributed = False, 
     if distributed and opts.distributed: dist.barrier()
         
     # log to screen  
-    if rank == 0: log_to_screen(time_used, 
+    if rank == 0: log_to_screen_and_file(time_used,
                                   count_obj_ci, average_diff_obj_ci, count_obj_mm, average_diff_obj_mm,
                                   batch_size = opts.val_size,
                                   dataset_size = len(val_dataset)

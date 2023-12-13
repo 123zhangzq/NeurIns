@@ -20,6 +20,34 @@ def log_to_screen(time_used, count_obj_ci, average_diff_obj_ci, count_obj_mm, av
     print('Avg used time:'.center(35), '{:f}s'.format(
             time_used.mean() / dataset_size))
     print('-'*60, '\n')
+
+
+def log_to_screen_and_file(time_used, count_obj_ci, average_diff_obj_ci, count_obj_mm, average_diff_obj_m,
+                           batch_size, dataset_size, output_file_path):
+    # reward
+    with open(output_file_path, 'a') as file:
+        file.write('\n' + '-'*60 + '\n')
+        file.write('The number of instances not worse than cheapest insertion:'.center(35) + '{:f}s\n'.format(count_obj_ci))
+        file.write('Avg difference:'.center(35) + '{:f}s\n'.format(average_diff_obj_ci))
+        file.write('The number of instances not worse than math model:'.center(35) + '{:f}s\n'.format(count_obj_mm))
+        file.write('Avg difference:'.center(35) + '{:f}s\n'.format(average_diff_obj_m))
+
+        # time
+        file.write('-'*60 + '\n')
+        file.write('Avg used time:'.center(35) + '{:f}s\n'.format(time_used.mean() / dataset_size))
+        file.write('-'*60 + '\n\n')
+
+    # Output to screen
+    print('\n', '-'*60)
+    print('The number of instances not worse than cheapest insertion:'.center(35), '{:f}s'.format(count_obj_ci))
+    print('Avg difference:'.center(35), '{:f}s'.format(average_diff_obj_ci))
+    print('The number of instances not worse than math model:'.center(35), '{:f}s'.format(count_obj_mm))
+    print('Avg difference:'.center(35), '{:f}s'.format(average_diff_obj_m))
+    print('-'*60)
+    print('Avg used time:'.center(35), '{:f}s'.format(time_used.mean() / dataset_size))
+    print('-'*60, '\n')
+
+
     
 def log_to_tb_val(tb_logger, time_used, init_value, best_value, reward, costs_history, search_history,
                   batch_size, val_size, dataset_size, T, epoch):

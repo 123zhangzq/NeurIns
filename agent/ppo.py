@@ -399,7 +399,7 @@ def train_batch(
     old_states = torch.stack(memory.states).detach().view(t_time, batch_size, -1)
     old_actions = all_actions[1:].view(t_time, -1, 3)
     old_logprobs = torch.stack(memory.logprobs).detach().view(-1)
-    old_exchange = all_actions[:-1].view(t_time, -1, 3)
+
 
 
     old_obj = torch.stack(memory.obj)
@@ -449,7 +449,7 @@ def train_batch(
         reward_reversed = memory.rewards[::-1]
 
         # estimate return
-        R = agent.critic(agent.actor(problem,batch_feature,padded_solution,step_info,only_critic = True), obj.view(obj.size(0), -1)[:,-1].unsqueeze(-1))[0]
+        R = 0
         for r in range(len(reward_reversed)):
             R = R * gamma + reward_reversed[r]
             Reward.append(R)
