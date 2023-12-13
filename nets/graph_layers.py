@@ -870,6 +870,7 @@ class EmbeddingNet(nn.Module):
                     stacks[index2, current_nodes[index2] - valid_half_size] = -0.01  # fix bug: topk is not stable sorting
                 top2[arange, current_nodes] = stacks.topk(2)[1]
 
+
         index = (visited_time % valid_seq_length).long().unsqueeze(-1).expand(batch_size, seq_length, embedding_dim)
         # return
         return torch.gather(position_enc_new, 1, index), visited_time.long(), top2 if clac_stacks else None

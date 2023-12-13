@@ -84,7 +84,7 @@ class Actor(nn.Module):
         if only_critic:
             return (h_em)
 
-        visited_order_map = problem.get_visited_order_map(visited_time)
+        visited_order_map = problem.get_visited_order_map(visited_time,step_info)
         del visited_time
         
         # pass through decoder

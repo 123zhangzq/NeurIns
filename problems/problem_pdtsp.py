@@ -21,9 +21,11 @@ class PDTSP(object):
         return torch.cat([batch['coordinates'], batch['dynamic_loc']], dim=1)
 
     
-    def get_visited_order_map(self, visited_time):
+    def get_visited_order_map(self, visited_time, step_info):
+        dy_size, dy_t = step_info
         bs, gs = visited_time.size()
-        visited_time = visited_time % gs
+        valid_l = gs - dy_size + 2 * dy_t
+        visited_time = visited_time % valid_l
 
         return visited_time.view(bs, gs, 1) > visited_time.view(bs, 1, gs)
 
