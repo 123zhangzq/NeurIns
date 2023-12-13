@@ -152,6 +152,7 @@ class PPO:
 
 
         # statistic
+        obj1 = problem.get_costs(batch, solutions, flag_finish=True)
         final_obj = obj.view(-1)
         cheapest_ins_obj = batch['ci_obj'].view(-1)
         mm_obj = batch['mm_obj'].view(-1)
