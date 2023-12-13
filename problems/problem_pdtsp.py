@@ -207,9 +207,11 @@ class PDTSP(object):
         all_coor = torch.cat([batch['coordinates'], batch['dynamic_loc']], dim=1)
 
         # check feasibility
-        if self.do_assert:
-            if flag_finish == True:
-                self.check_feasibility(rec)
+        # if self.do_assert:
+        #     if flag_finish == True:
+        #         self.check_feasibility(rec)
+        if flag_finish == True:
+            self.check_feasibility(rec)
 
 
 
