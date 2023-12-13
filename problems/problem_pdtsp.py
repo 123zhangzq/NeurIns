@@ -281,6 +281,10 @@ class PDPDataset(Dataset):
     
     def make_instance(self, args):
         depot, loc, sol_static, dynamic_loc, *args = args
+        depot = [x / 100 for x in depot]
+        loc = [[x / 100 for x in inner_list] for inner_list in loc]
+        dynamic_loc = [[x / 100 for x in inner_list] for inner_list in dynamic_loc]
+
 
         if len(args) > 0:
             temp = args
@@ -295,6 +299,11 @@ class PDPDataset(Dataset):
 
         if len(args) == 6:
             depot, loc, sol_static, dynamic_loc, ci_obj, mm_obj, *args = args
+            depot = [x / 100 for x in depot]
+            loc = [[x / 100 for x in inner_list] for inner_list in loc]
+            dynamic_loc = [[x / 100 for x in inner_list] for inner_list in dynamic_loc]
+
+
             if len(args) > 0:
                 temp = args
             return {
@@ -302,10 +311,15 @@ class PDPDataset(Dataset):
                 'depot': torch.tensor(depot, dtype=torch.float),
                 'sol_static': torch.tensor(sol_static, dtype=torch.int),
                 'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
-                'ci_obj': torch.tensor(ci_obj, dtype=torch.float),
-                'mm_obj': torch.tensor(mm_obj, dtype=torch.float)}
+                'ci_obj': torch.tensor(ci_obj/100, dtype=torch.float),
+                'mm_obj': torch.tensor(mm_obj/100, dtype=torch.float)}
         elif len(args) == 5:
             depot, loc, sol_static, dynamic_loc, ci_obj, *args = args
+            depot = [x / 100 for x in depot]
+            loc = [[x / 100 for x in inner_list] for inner_list in loc]
+            dynamic_loc = [[x / 100 for x in inner_list] for inner_list in dynamic_loc]
+
+
             if len(args) > 0:
                 temp = args
             return {
@@ -313,7 +327,7 @@ class PDPDataset(Dataset):
                 'depot': torch.tensor(depot, dtype=torch.float),
                 'sol_static': torch.tensor(sol_static, dtype=torch.int),
                 'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
-                'ci_obj': torch.tensor(ci_obj, dtype=torch.float)}
+                'ci_obj': torch.tensor(ci_obj/100, dtype=torch.float)}
         else:
             raise ValueError("The input of the validation datasets is wrong...")
 
