@@ -161,9 +161,9 @@ class PPO:
         count_obj_ci = torch.sum(final_obj <= cheapest_ins_obj)
         count_obj_mm = torch.sum(final_obj <= mm_obj)
 
-        sum_diff_obj_ci = torch.sum(final_obj - cheapest_ins_obj)
+        sum_diff_obj_ci = torch.sum((final_obj - cheapest_ins_obj)/cheapest_ins_obj)
         average_diff_obj_ci = sum_diff_obj_ci / final_obj.size(0)
-        sum_diff_obj_mm = torch.sum(final_obj - mm_obj)
+        sum_diff_obj_mm = torch.sum((final_obj - mm_obj)/mm_obj)
         average_diff_obj_mm = sum_diff_obj_mm / final_obj.size(0)
 
 
