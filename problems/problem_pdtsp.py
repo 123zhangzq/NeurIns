@@ -197,6 +197,7 @@ class PDTSP(object):
             visited_time[:, static_pos + d_size // 2:]
         ).all(), (visited_time[:, static_pos: static_pos + d_size // 2] <
             visited_time[:, static_pos + d_size // 2:],"dynamic orders delivery without pick-up")
+        print("check all the feasibilities!!!")
     
     
     def get_swap_mask(self, selected_node, visited_order_map, step_info, top2=None):
@@ -214,6 +215,7 @@ class PDTSP(object):
         #         self.check_feasibility(rec)
         if flag_finish == True:
             self.check_feasibility(rec)
+
 
 
 
