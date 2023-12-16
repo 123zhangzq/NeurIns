@@ -591,15 +591,16 @@ class MultiHeadDecoder(nn.Module):
             pos_pickup = action_removal
             pos_delivery = pos_pickup + dy_half_pos
             rec_new = solutions.clone()
-            argsort = rec_new.argsort()
-            pre_pairfirst = argsort.gather(1, pos_pickup)
-            post_pairfirst = rec_new.gather(1, pos_pickup)
-            rec_new.scatter_(1,pre_pairfirst, post_pairfirst)
-            rec_new.scatter_(1,pos_pickup, pos_pickup)
-            argsort = rec_new.argsort()
-            pre_pairsecond = argsort.gather(1, pos_delivery)
-            post_pairsecond = rec_new.gather(1, pos_delivery)
-            rec_new.scatter_(1,pre_pairsecond,post_pairsecond) 
+            # argsort = rec_new.argsort()
+            # pre_pairfirst = argsort.gather(1, pos_pickup)
+            # post_pairfirst = rec_new.gather(1, pos_pickup)
+            # rec_new.scatter_(1,pre_pairfirst, post_pairfirst)
+            # rec_new.scatter_(1,pos_pickup, pos_pickup)
+            # argsort = rec_new.argsort()
+            # pre_pairsecond = argsort.gather(1, pos_delivery)
+            # post_pairsecond = rec_new.gather(1, pos_delivery)
+            # rec_new.scatter_(1,pre_pairsecond,post_pairsecond)
+
             # perform calc on new rec_new
             first_row = torch.arange(gs, device = solutions.device).long().unsqueeze(0).expand(bs, gs)
             d_i =  x_in.gather(1, first_row.unsqueeze(-1).expand(bs, gs, 2))
