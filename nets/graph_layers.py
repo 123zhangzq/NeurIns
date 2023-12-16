@@ -609,6 +609,12 @@ class MultiHeadDecoder(nn.Module):
             d_deli = x_in.gather(1, pos_delivery.unsqueeze(1).expand(bs, gs, 2))
             cost_insert_p = (d_pick  - d_i).norm(p=2, dim=2) + (d_pick  - d_i_next).norm(p=2, dim=2) - (d_i  - d_i_next).norm(p=2, dim=2)
             cost_insert_d = (d_deli  - d_i).norm(p=2, dim=2) + (d_deli  - d_i_next).norm(p=2, dim=2) - (d_i  - d_i_next).norm(p=2, dim=2)
+
+            # not to return depot
+            zero_indices = (solutions == 0).to(torch.bool)
+            cost_insert_p[zero_indices] = (d_pick  - d_i).norm(p=2, dim=2)[zero_indices]
+            cost_insert_d[zero_indices] = (d_deli  - d_i).norm(p=2, dim=2)[zero_indices]
+
             action_reinsertion_table = - (cost_insert_p.view(bs, gs, 1) + cost_insert_d.view(bs, 1, gs))
 
             action_table_p = - (cost_insert_p.view(bs, gs, 1) + torch.zeros(bs, 1, gs).to(solutions.device))

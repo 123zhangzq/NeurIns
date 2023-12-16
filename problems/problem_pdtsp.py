@@ -209,7 +209,7 @@ class PDTSP(object):
         
     
     def get_costs(self, batch, rec, flag_finish=False):
-
+        # can only get  1) the static orders cost and 2) the final routes with all dynamic orders cost
         batch_size, size = rec.size()
         all_coor = torch.cat([batch['coordinates'], batch['dynamic_loc']], dim=1)
 
