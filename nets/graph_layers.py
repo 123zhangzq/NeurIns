@@ -9,9 +9,9 @@ TYPE_REMOVAL = 'N2S'
 #TYPE_REMOVAL = 'random'
 #TYPE_REMOVAL = 'greedy'
 
-TYPE_REINSERTION = 'N2S'
+#TYPE_REINSERTION = 'N2S'
 #TYPE_REINSERTION = 'random'
-#TYPE_REINSERTION = 'greedy'
+TYPE_REINSERTION = 'greedy'
 
 
 class SkipConnection(nn.Module):
@@ -641,7 +641,7 @@ class MultiHeadDecoder(nn.Module):
             d_selected = pair_index % gs
             action = torch.cat((action_removal.view(bs, -1), p_selected, d_selected),-1)  # pair: no_head bs, 2
         
-        selected_log_ll_action2 = log_ll_reinsertion.gather(1, pair_index)  if self.training and TYPE_REINSERTION == 'N2S' else torch.tensor(0).to(h.device)
+        selected_log_ll_action2 = log_ll_reinsertion.gather(1, pair_index)  if self.training and TYPE_REINSERTION == 'N2S' else torch.zeros((bs, 1)).to(h.device)
         
         # log_ll = selected_log_ll_action1 + selected_log_ll_action2
         log_ll = selected_log_ll_action2
