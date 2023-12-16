@@ -129,12 +129,6 @@ class PPO:
 
         batch_feature = problem.input_feature_encoding(batch)
 
-        ### test and delete
-        sol_CI = move_to(problem.get_CI_solutions(batch), self.opts.device).long()
-        obj_CI = problem.get_costs(batch, sol_CI, flag_finish=True)
-        ###
-
-
 
         solutions = move_to(problem.get_static_solutions(batch), self.opts.device).long()
         obj = problem.get_costs(batch, solutions, flag_finish=False)

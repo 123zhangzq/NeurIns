@@ -63,9 +63,9 @@ class PDTSP(object):
         assert batch['sol_static'].shape[1] == 2 * self.static_orders + 1, "The input (static orders' routes) is wrong..."
         return batch['sol_static'].to(torch.int64)
 
-    def get_CI_solutions(self, batch):
-        assert batch['sol_CI'].shape[1] == self.size + 1, "The input (static orders' routes) is wrong..."
-        return batch['sol_CI'].to(torch.int64)
+    def get_MM_solutions(self, batch):
+        assert batch['sol_MM'].shape[1] == self.size + 1, "The input (solution routes) is wrong..."
+        return batch['sol_MM'].to(torch.int64)
 
     def get_initial_solutions(self, batch, val_m = 1):
         
@@ -323,7 +323,7 @@ class PDPDataset(Dataset):
                 'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
                 'ci_obj': torch.tensor(ci_obj/100, dtype=torch.float),
                 'mm_obj': torch.tensor(mm_obj/100, dtype=torch.float),
-                'sol_CI': torch.tensor(CI_sol, dtype=torch.int)}
+                'sol_MM': torch.tensor(CI_sol, dtype=torch.int)}
         elif len(args) == 6:
             depot, loc, sol_static, dynamic_loc, ci_obj, CI_sol, *args = args
             depot = [x / 100 for x in depot]
@@ -339,7 +339,7 @@ class PDPDataset(Dataset):
                 'sol_static': torch.tensor(sol_static, dtype=torch.int),
                 'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
                 'ci_obj': torch.tensor(ci_obj/100, dtype=torch.float),
-                'sol_CI': torch.tensor(CI_sol, dtype=torch.int)}
+                'sol_MM': torch.tensor(CI_sol, dtype=torch.int)}
         else:
             raise ValueError("The input of the validation datasets is wrong...")
 
