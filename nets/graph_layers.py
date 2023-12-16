@@ -611,8 +611,8 @@ class MultiHeadDecoder(nn.Module):
             cost_insert_d = (d_deli  - d_i).norm(p=2, dim=2) + (d_deli  - d_i_next).norm(p=2, dim=2) - (d_i  - d_i_next).norm(p=2, dim=2)
             action_reinsertion_table = - (cost_insert_p.view(bs, gs, 1) + cost_insert_d.view(bs, 1, gs))
 
-            action_table_p = - (cost_insert_p.view(bs, gs, 1) + torch.zeros(bs, 1, gs))
-            action_table_d = - (torch.zeros(bs, gs, 1) + cost_insert_d.view(bs, 1, gs))
+            action_table_p = - (cost_insert_p.view(bs, gs, 1) + torch.zeros(bs, 1, gs).to(solutions.device))
+            action_table_d = - (torch.zeros(bs, gs, 1).to(solutions.device) + cost_insert_d.view(bs, 1, gs))
             action_table_p[mask_table] = -1e20
             action_table_d[mask_table] = -1e20
 
