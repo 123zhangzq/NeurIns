@@ -63,6 +63,10 @@ class PDTSP(object):
         assert batch['sol_static'].shape[1] == 2 * self.static_orders + 1, "The input (static orders' routes) is wrong..."
         return batch['sol_static'].to(torch.int64)
 
+    def get_CI_solutions(self, batch):
+        assert batch['sol_CI'].shape[1] == self.size + 1, "The input (static orders' routes) is wrong..."
+        return batch['sol_CI'].to(torch.int64)
+
     def get_initial_solutions(self, batch, val_m = 1):
         
         batch_size = batch['coordinates'].size(0)
@@ -303,8 +307,8 @@ class PDPDataset(Dataset):
     def make_val_instance(self, args):
 
 
-        if len(args) == 6:
-            depot, loc, sol_static, dynamic_loc, ci_obj, mm_obj, *args = args
+        if len(args) == 7:
+            depot, loc, sol_static, dynamic_loc, ci_obj, mm_obj, CI_sol, *args = args
             depot = [x / 100 for x in depot]
             loc = [[x / 100 for x in inner_list] for inner_list in loc]
             dynamic_loc = [[x / 100 for x in inner_list] for inner_list in dynamic_loc]
@@ -318,9 +322,10 @@ class PDPDataset(Dataset):
                 'sol_static': torch.tensor(sol_static, dtype=torch.int),
                 'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
                 'ci_obj': torch.tensor(ci_obj/100, dtype=torch.float),
-                'mm_obj': torch.tensor(mm_obj/100, dtype=torch.float)}
-        elif len(args) == 5:
-            depot, loc, sol_static, dynamic_loc, ci_obj, *args = args
+                'mm_obj': torch.tensor(mm_obj/100, dtype=torch.float),
+                'sol_CI': torch.tensor(CI_sol, dtype=torch.int)}
+        elif len(args) == 6:
+            depot, loc, sol_static, dynamic_loc, ci_obj, CI_sol, *args = args
             depot = [x / 100 for x in depot]
             loc = [[x / 100 for x in inner_list] for inner_list in loc]
             dynamic_loc = [[x / 100 for x in inner_list] for inner_list in dynamic_loc]
@@ -333,7 +338,8 @@ class PDPDataset(Dataset):
                 'depot': torch.tensor(depot, dtype=torch.float),
                 'sol_static': torch.tensor(sol_static, dtype=torch.int),
                 'dynamic_loc': torch.tensor(dynamic_loc, dtype=torch.float),
-                'ci_obj': torch.tensor(ci_obj/100, dtype=torch.float)}
+                'ci_obj': torch.tensor(ci_obj/100, dtype=torch.float),
+                'sol_CI': torch.tensor(CI_sol, dtype=torch.int)}
         else:
             raise ValueError("The input of the validation datasets is wrong...")
 

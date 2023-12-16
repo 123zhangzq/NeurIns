@@ -129,6 +129,13 @@ class PPO:
 
         batch_feature = problem.input_feature_encoding(batch)
 
+        ### test and delete
+        sol_CI = move_to(problem.get_CI_solutions(batch), self.opts.device).long()
+        obj_CI = problem.get_costs(batch, sol_CI, flag_finish=True)
+        ###
+
+
+
         solutions = move_to(problem.get_static_solutions(batch), self.opts.device).long()
         obj = problem.get_costs(batch, solutions, flag_finish=False)
         padded_solution = pad_solution(solutions, batch_feature.size(1))
@@ -322,6 +329,7 @@ def train_batch(
     # print(f"rank {rank}, data from {batch['id'][0]},{batch['id'][1]} , to {batch['id'][-2]},{batch['id'][-1]}")
 
     # initial solution of the static orders
+
     solution = move_to_cuda(problem.get_static_solutions(batch),rank) if opts.distributed \
                         else move_to(problem.get_static_solutions(batch), opts.device)
     obj = problem.get_costs(batch, solution, flag_finish = False)
