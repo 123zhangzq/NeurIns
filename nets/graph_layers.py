@@ -632,7 +632,8 @@ class MultiHeadDecoder(nn.Module):
             if TYPE_REINSERTION == 'greedy':
                 action_reinsertion_random = probs_reinsertion_random.multinomial(1)
                 action_reinsertion_greedy = probs_reinsertion.max(-1)[1].unsqueeze(1)
-                pair_index = torch.where(torch.rand(bs,1).to(h_em.device) < 0.1, action_reinsertion_random, action_reinsertion_greedy)
+                # pair_index = torch.where(torch.rand(bs,1).to(h_em.device) < 0.1, action_reinsertion_random, action_reinsertion_greedy)
+                pair_index = action_reinsertion_greedy
             else:
                 # sample one action
                 pair_index = probs_reinsertion.multinomial(1)
