@@ -610,6 +610,13 @@ class MultiHeadDecoder(nn.Module):
             cost_insert_p = (d_pick  - d_i).norm(p=2, dim=2) + (d_pick  - d_i_next).norm(p=2, dim=2) - (d_i  - d_i_next).norm(p=2, dim=2)
             cost_insert_d = (d_deli  - d_i).norm(p=2, dim=2) + (d_deli  - d_i_next).norm(p=2, dim=2) - (d_i  - d_i_next).norm(p=2, dim=2)
             action_reinsertion_table = - (cost_insert_p.view(bs, gs, 1) + cost_insert_d.view(bs, 1, gs))
+
+            action_table_p = - (cost_insert_p.view(bs, gs, 1) + torch.zeros(bs, 1, gs))
+            action_table_d = - (torch.zeros(bs, gs, 1) + cost_insert_d.view(bs, 1, gs))
+            action_table_p[mask_table] = -1e20
+            action_table_d[mask_table] = -1e20
+
+
             action_reinsertion_table_random = torch.ones(bs, gs, gs).to(h_em.device)
             action_reinsertion_table_random[mask_table] = -1e20
             action_reinsertion_table_random = action_reinsertion_table_random.view(bs, -1)
@@ -653,6 +660,28 @@ class MultiHeadDecoder(nn.Module):
             entropy = dist.entropy()
         else:
             entropy = None
+
+        if TYPE_REINSERTION == 'greedy':
+            action_table_p = action_table_p.view(bs, -1)
+            probs_reinsertion = F.softmax(action_table_p, dim=-1)
+            action_reinsertion_greedy = probs_reinsertion.max(-1)[1].unsqueeze(1)
+            pair_index = action_reinsertion_greedy
+            p_selected = pair_index // gs
+            p_ind = p_selected.clone().unsqueeze(-1).expand(-1, -1, action_table_d.size(-1))
+
+
+            action_table_d = action_table_d.gather(1, p_ind).view(bs, -1)
+            probs_reinsertion = F.softmax(action_table_d, dim=-1)
+            action_reinsertion_greedy = probs_reinsertion.max(-1)[1].unsqueeze(1)
+            d_selected = action_reinsertion_greedy % gs
+
+            action = torch.cat((action_removal.view(bs, -1), p_selected, d_selected), -1)  # pair: no_head bs, 2
+            return action, log_ll, entropy
+
+
+
+
+
 
         return action, log_ll, entropy
 
