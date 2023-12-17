@@ -139,13 +139,21 @@ class PDTSP(object):
 
         bs, gs = rec.size()
 
-        selected = exchange[:, 0].view(bs, 1)
-        first = exchange[:, 1].view(bs, 1)
-        second = exchange[:, 2].view(bs, 1)
+        selected = exchange[:, 3].view(bs, 1)
+        first = exchange[:, 4].view(bs, 1)
+        second = exchange[:, 5].view(bs, 1)
 
         next_state = self.insert_star(rec, selected, first, second)
 
         new_obj = self.get_costs(batch, next_state)
+
+
+        # CI
+        # selected_CI = exchange[:, 0].view(bs, 1)
+        # first_CI = exchange[:, 1].view(bs, 1)
+        # second_CI = exchange[:, 2].view(bs, 1)
+
+
 
         reward = - (new_obj - last_obj)
 
