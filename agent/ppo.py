@@ -141,14 +141,14 @@ class PPO:
         for t in tqdm(range(dy_size // 2), disable = self.opts.no_progress_bar or not show_bar, desc = 'rollout', bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'):
             step_info = (dy_size, t)
             # pass through model
-            exchange, CI_action = self.actor(problem,
+            exchange = self.actor(problem,
                                   batch_feature,
                                   padded_solution,
                                   step_info,
                                   do_sample = do_sample)[0]
 
             # new solution
-            padded_solution, rewards, obj = problem.step(batch, padded_solution, exchange, obj, CI_action)
+            padded_solution, rewards, obj = problem.step(batch, padded_solution, exchange, obj, None)
 
 
 

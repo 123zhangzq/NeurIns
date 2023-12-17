@@ -135,29 +135,45 @@ class PDTSP(object):
 
         return get_solution(self.init_val_met).expand(batch_size, self.size + 1).clone()
 
-    def step(self, batch, rec, exchange, last_obj, CI_action):
+    def step(self, batch, rec, exchange, last_obj, CI_action=None):
+        if CI_action == None:
+            bs, gs = rec.size()
 
-        bs, gs = rec.size()
+            selected = exchange[:, 0].view(bs, 1)
+            first = exchange[:, 1].view(bs, 1)
+            second = exchange[:, 2].view(bs, 1)
 
-        selected = CI_action[:, 0].view(bs, 1)
-        first = CI_action[:, 1].view(bs, 1)
-        second = CI_action[:, 2].view(bs, 1)
+            next_state = self.insert_star(rec, selected, first, second)
 
-        next_state = self.insert_star(rec, selected, first, second)
+            new_obj = self.get_costs(batch, next_state)
 
-        new_obj = self.get_costs(batch, next_state)
+            reward = - (new_obj - last_obj)
+
+            return next_state, reward, new_obj
+        else:
+            bs, gs = rec.size()
+
+            selected = exchange[:, 0].view(bs, 1)
+            first = exchange[:, 1].view(bs, 1)
+            second = exchange[:, 2].view(bs, 1)
+
+            next_state = self.insert_star(rec, selected, first, second)
+
+            new_obj = self.get_costs(batch, next_state)
+
+            # CI
+            selected_CI = CI_action[:, 0].view(bs, 1)
+            first_CI = CI_action[:, 1].view(bs, 1)
+            second_CI = CI_action[:, 2].view(bs, 1)
+
+            next_state_CI = self.insert_star(rec, selected_CI, first_CI, second_CI)
+            CI_obj = self.get_costs(batch, next_state_CI)
 
 
-        # CI
-        # selected_CI = exchange[:, 0].view(bs, 1)
-        # first_CI = exchange[:, 1].view(bs, 1)
-        # second_CI = exchange[:, 2].view(bs, 1)
 
+            reward = (CI_obj - last_obj) - (new_obj - last_obj)
 
-
-        reward = - (new_obj - last_obj)
-
-        return next_state, reward, new_obj
+            return next_state, reward, new_obj
 
     def insert_star(self, solution, pair_index, first, second):
         
