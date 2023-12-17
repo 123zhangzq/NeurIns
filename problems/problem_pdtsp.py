@@ -135,13 +135,13 @@ class PDTSP(object):
 
         return get_solution(self.init_val_met).expand(batch_size, self.size + 1).clone()
 
-    def step(self, batch, rec, exchange, last_obj):
+    def step(self, batch, rec, exchange, last_obj, CI_action):
 
         bs, gs = rec.size()
 
-        selected = exchange[:, 3].view(bs, 1)
-        first = exchange[:, 4].view(bs, 1)
-        second = exchange[:, 5].view(bs, 1)
+        selected = CI_action[:, 0].view(bs, 1)
+        first = CI_action[:, 1].view(bs, 1)
+        second = CI_action[:, 2].view(bs, 1)
 
         next_state = self.insert_star(rec, selected, first, second)
 

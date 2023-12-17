@@ -88,7 +88,7 @@ class Actor(nn.Module):
         del visited_time
         
         # pass through decoder
-        action, log_ll, entropy = self.decoder( problem,
+        action, log_ll, entropy, CI_action = self.decoder( problem,
                                                 h_em, 
                                                 solution,
                                                 step_info,
@@ -99,6 +99,6 @@ class Actor(nn.Module):
                                                 require_entropy = require_entropy)
             
         if require_entropy:
-            return action, log_ll.squeeze(), (h_em) if to_critic else None, entropy
+            return action, log_ll.squeeze(), (h_em) if to_critic else None, entropy, CI_action
         else:
-            return action, log_ll.squeeze(), (h_em) if to_critic else None
+            return action, log_ll.squeeze(), (h_em) if to_critic else None, CI_action

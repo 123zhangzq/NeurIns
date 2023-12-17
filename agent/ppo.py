@@ -130,6 +130,7 @@ class PPO:
         batch_feature = problem.input_feature_encoding(batch)
 
 
+
         solutions = move_to(problem.get_static_solutions(batch), self.opts.device).long()
         obj = problem.get_costs(batch, solutions, flag_finish=False)
         padded_solution = pad_solution(solutions, batch_feature.size(1))
@@ -140,14 +141,14 @@ class PPO:
         for t in tqdm(range(dy_size // 2), disable = self.opts.no_progress_bar or not show_bar, desc = 'rollout', bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'):
             step_info = (dy_size, t)
             # pass through model
-            exchange = self.actor(problem,
+            exchange, CI_action = self.actor(problem,
                                   batch_feature,
                                   padded_solution,
                                   step_info,
                                   do_sample = do_sample)[0]
 
             # new solution
-            padded_solution, rewards, obj = problem.step(batch, padded_solution, exchange, obj)
+            padded_solution, rewards, obj = problem.step(batch, padded_solution, exchange, obj, CI_action)
 
 
 
@@ -359,7 +360,7 @@ def train_batch(
 
         # get model output
         step_info = (dy_size, t)
-        exchange, log_lh, _to_critic, entro_p  = agent.actor(problem,
+        exchange, log_lh, _to_critic, entro_p, CI_action = agent.actor(problem,
                                                              batch_feature,
                                                              padded_solution,
                                                              step_info,
@@ -382,7 +383,7 @@ def train_batch(
         bl_val.append(baseline_val)
 
         # state transient
-        padded_solution, rewards, obj = problem.step(batch, padded_solution, exchange, obj)
+        padded_solution, rewards, obj = problem.step(batch, padded_solution, exchange, obj, CI_action)
         memory.rewards.append(rewards)
         # memory.mask_true = memory.mask_true + info['swaped']
 
@@ -425,7 +426,7 @@ def train_batch(
             for tt in range(t_time):
                 # get new action_prob
                 step_info_ = (dy_size, tt)
-                _, log_p, _to_critic, entro_p = agent.actor(problem,
+                _, log_p, _to_critic, entro_p, CI_action = agent.actor(problem,
                                                             batch_feature,
                                                             old_states[tt],
                                                             step_info_,

@@ -707,21 +707,19 @@ class MultiHeadDecoder(nn.Module):
         action_reinsertion_table[mask_table] = -1e20
 
         action_reinsertion_table = action_reinsertion_table.view(bs, -1)
-        log_ll_reinsertion = F.log_softmax(action_reinsertion_table, dim = -1) if self.training and TYPE_REINSERTION == 'N2S' else None
+
         probs_reinsertion = F.softmax(action_reinsertion_table, dim = -1)
 
-        action_reinsertion_random = probs_reinsertion_random.multinomial(1)
         action_reinsertion_greedy = probs_reinsertion.max(-1)[1].unsqueeze(1)
-        # pair_index = torch.where(torch.rand(bs,1).to(h_em.device) < 0.1, action_reinsertion_random, action_reinsertion_greedy)
+
         pair_index = action_reinsertion_greedy
 
         p_selected = pair_index // gs
         d_selected = pair_index % gs
         CI_action = torch.cat((action_removal.view(bs, -1), p_selected, d_selected), -1)  # pair: no_head bs, 2
 
-        action = torch.cat(action, CI_action)
         del visited_order_map, mask_table
-        return action, log_ll, entropy
+        return action, log_ll, entropy, CI_action
 
 
 class Normalization(nn.Module):
