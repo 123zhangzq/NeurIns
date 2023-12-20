@@ -32,7 +32,7 @@ def get_options(args=None):
     parser.add_argument('--normalization', default='layer', help="normalization type, 'layer' (default) or 'batch'")
 
     # Training parameters
-    parser.add_argument('--RL_agent', default='ppo', choices = ['ppo'], help='RL Training algorithm')
+    parser.add_argument('--RL_agent', default='Reinforce', choices = ['ppo', 'Reinforce'], help='RL Training algorithm')
     parser.add_argument('--gamma', type=float, default=0.999, help='reward discount factor for future rewards')
     parser.add_argument('--K_epochs', type=int, default=3, help='mini PPO epoch')
     parser.add_argument('--eps_clip', type=float, default=0.1, help='PPO clip ratio')

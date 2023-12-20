@@ -10,10 +10,12 @@ from options import get_options
 from problems.problem_pdtsp import PDTSP
 from problems.problem_pdtspl import PDTSPL
 from agent.ppo import PPO
+from agent.Reinforce import Reinforce
 
 def load_agent(name):
     agent = {
         'ppo': PPO,
+        'Reinforce': Reinforce,
     }.get(name, None)
     assert agent is not None, "Currently unsupported agent: {}!".format(name)
     return agent
