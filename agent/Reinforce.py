@@ -395,7 +395,7 @@ def train_batch(
 
 
     # calculate loss
-    loss = (R * log_likelihood).mean()
+    loss = (-R * log_likelihood).mean()
 
     # update gradient step
     agent.optimizer.zero_grad()
