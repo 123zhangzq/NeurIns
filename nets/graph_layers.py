@@ -441,24 +441,15 @@ class Reinsertion(nn.Module):
                                             compatibility_delivery_post),-1)).squeeze()
 
 
-
-
-
         # continue
         compatibility = self.agg(torch.cat((compatibility_pickup_pre, 
                                             compatibility_pickup_post, 
                                             compatibility_delivery_pre, 
                                             compatibility_delivery_post),-1)).squeeze()
 
-        ###
-        compatibility_NP1 = compatibility.clone().cpu().detach().numpy()
-        ###
-
         # V2
         compatibility[:, diag_indices, diag_indices] = compatibility_same_node[:, diag_indices, diag_indices]
-        ###
-        compatibility_NP2 = compatibility.clone().cpu().detach().numpy()
-        ###
+
 
         return compatibility
 
