@@ -121,7 +121,7 @@ class Reinforce:
         self.actor.train()
         if not self.opts.eval_only: self.critic.train()
     
-    def rollout(self, problem, batch, do_sample = False, show_bar = False):     # TODO NOW: 1. get initial solution. 2. data related
+    def rollout(self, problem, batch, do_sample = False, show_bar = False):     # TODO NOW: output
         batch = move_to(batch, self.opts.device) # batch_size, graph_size, 2
         bs, gs, dim = batch['coordinates'].size()
 
