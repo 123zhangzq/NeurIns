@@ -435,7 +435,7 @@ class Reinsertion(nn.Module):
 
         compatibility_pickup_post_delivery = self.compater_insert2(h_pickup, h_delivery).permute(1, 2, 3, 0).view(shp_p).expand(shp)
         #compatibility_delivery_pre_pickup = self.compater_insert1(h_delivery, h_pickup).permute(1, 2, 3, 0).view(shp_d).expand(shp)
-        compatibility_delivery_pre_pickup = torch.zeros(shp)
+        compatibility_delivery_pre_pickup = torch.zeros(shp, device=compatibility_pickup_post_delivery.device)
 
         compatibility_same_node = self.agg(torch.cat((compatibility_pickup_pre,
                                             compatibility_pickup_post_delivery,
