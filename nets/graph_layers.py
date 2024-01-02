@@ -417,7 +417,7 @@ class Reinsertion(nn.Module):
         compatibility_delivery_pre = self.compater_insert1(h_delivery, h).permute(1,2,3,0).view(shp_d).expand(shp)
         compatibility_delivery_post = self.compater_insert2(h_delivery, h_K_neibour).permute(1,2,3,0).view(shp_d).expand(shp)
 
-        # p and d insert after the same node, V1
+        ## p and d insert after the same node, V1
         # diag_indices = torch.arange(graph_size)
         #
         # compatibility_pickup_post = compatibility_pickup_post.clone()
@@ -428,18 +428,20 @@ class Reinsertion(nn.Module):
         #
         # compatibility_pickup_post[:, diag_indices, diag_indices, :] = compatibility_pickup_post_delivery[:, diag_indices, diag_indices, :]
         # compatibility_delivery_pre[:, diag_indices, diag_indices, :] = compatibility_delivery_pre_pickup[:, diag_indices, diag_indices, :]
+        ## end V1
 
         # p and d insert after the same node, V2
         diag_indices = torch.arange(graph_size)
 
         compatibility_pickup_post_delivery = self.compater_insert2(h_pickup, h_delivery).permute(1, 2, 3, 0).view(shp_p).expand(shp)
-        compatibility_delivery_pre_pickup = self.compater_insert1(h_delivery, h_pickup).permute(1, 2, 3, 0).view(shp_d).expand(shp)
+        #compatibility_delivery_pre_pickup = self.compater_insert1(h_delivery, h_pickup).permute(1, 2, 3, 0).view(shp_d).expand(shp)
+        compatibility_delivery_pre_pickup = torch.zeros(shp)
 
         compatibility_same_node = self.agg(torch.cat((compatibility_pickup_pre,
                                             compatibility_pickup_post_delivery,
                                             compatibility_delivery_pre_pickup,
                                             compatibility_delivery_post),-1)).squeeze()
-
+        # end V2
 
         # continue
         compatibility = self.agg(torch.cat((compatibility_pickup_pre, 
@@ -449,7 +451,7 @@ class Reinsertion(nn.Module):
 
         # V2
         compatibility[:, diag_indices, diag_indices] = compatibility_same_node[:, diag_indices, diag_indices]
-
+        # end V2
 
         return compatibility
 
