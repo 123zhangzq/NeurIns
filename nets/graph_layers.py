@@ -548,7 +548,7 @@ class MultiHeadDecoder(nn.Module):
             param.data.uniform_(-stdv, stdv)
         
         
-    def forward(self, problem, h_em, solutions, step_info, x_in, top2, visited_order_map, fixed_action = None, require_entropy = False):
+    def forward(self, problem, h_em, solutions, step_info, x_in, top2, visited_order_map, fixed_action = None, require_entropy = False, do_sample = True):
         # size info
         dy_size, dy_t = step_info
 
@@ -668,6 +668,9 @@ class MultiHeadDecoder(nn.Module):
                 action_reinsertion_random = probs_reinsertion_random.multinomial(1)
                 action_reinsertion_greedy = probs_reinsertion.max(-1)[1].unsqueeze(1)
                 # pair_index = torch.where(torch.rand(bs,1).to(h_em.device) < 0.1, action_reinsertion_random, action_reinsertion_greedy)
+                pair_index = action_reinsertion_greedy
+            elif not do_sample:
+                action_reinsertion_greedy = probs_reinsertion.max(-1)[1].unsqueeze(1)
                 pair_index = action_reinsertion_greedy
             else:
                 # sample one action

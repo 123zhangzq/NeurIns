@@ -70,7 +70,7 @@ class Actor(nn.Module):
         trainable_num = sum(p.numel() for p in self.parameters() if p.requires_grad)
         return {'Total': total_num, 'Trainable': trainable_num}
 
-    def forward(self, problem, x_in, solution, step_info, do_sample = False, fixed_action = None, require_entropy = False, to_critic = False, only_critic  = False):
+    def forward(self, problem, x_in, solution, step_info, do_sample = True, fixed_action = None, require_entropy = False, to_critic = False, only_critic  = False):
 
         # the embedded input x
         bs, gs, in_d = x_in.size()
@@ -96,7 +96,8 @@ class Actor(nn.Module):
                                                 top2,
                                                 visited_order_map,
                                                 fixed_action,
-                                                require_entropy = require_entropy)
+                                                require_entropy = require_entropy,
+                                                do_sample = do_sample)
             
         if require_entropy:
             return action, log_ll.squeeze(), (h_em) if to_critic else None, entropy, CI_action

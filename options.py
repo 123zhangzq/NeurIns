@@ -34,7 +34,7 @@ def get_options(args=None):
     # Training parameters
     parser.add_argument('--RL_agent', default='ppo', choices = ['ppo', 'Reinforce'], help='RL Training algorithm')
     parser.add_argument('--gamma', type=float, default=0.999, help='reward discount factor for future rewards')
-    parser.add_argument('--K_epochs', type=int, default=3, help='mini PPO epoch')
+    parser.add_argument('--K_epochs', type=int, default=10, help='mini PPO epoch')
     parser.add_argument('--eps_clip', type=float, default=0.1, help='PPO clip ratio')
     parser.add_argument('--T_train', type=int, default=250, help='number of itrations for training')
     parser.add_argument('--n_step', type=int, default=5, help='n_step for return estimation')

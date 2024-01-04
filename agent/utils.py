@@ -59,7 +59,7 @@ def validate(rank, problem, agent, val_dataset, tb_logger, distributed = False, 
     s_time = time.time()
 
     for batch in tqdm(val_dataloader, desc = 'inference', bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}'):
-        padded_solution, final_obj, bool_obj_ci, count_obj_ci, average_diff_obj_ci, bool_obj_mm, count_obj_mm, average_diff_obj_mm = agent.rollout(problem,batch, do_sample = True, show_bar = rank==0)
+        padded_solution, final_obj, bool_obj_ci, count_obj_ci, average_diff_obj_ci, bool_obj_mm, count_obj_mm, average_diff_obj_mm = agent.rollout(problem,batch, do_sample = False, show_bar = rank==0)
 
 
         
