@@ -44,7 +44,7 @@ def get_options(args=None):
     parser.add_argument('--epoch_size', type=int, default=10000, help='number of instances per epoch during training')
     parser.add_argument('--lr_model', type=float, default=8e-5, help="learning rate for the actor network")
     parser.add_argument('--lr_critic', type=float, default=2e-5, help="learning rate for the critic network")
-    parser.add_argument('--lr_decay', type=float, default=0.985, help='learning rate decay per epoch')
+    parser.add_argument('--lr_decay', type=float, default=0.995, help='learning rate decay per epoch')
     parser.add_argument('--max_grad_norm', type=float, default=0.05, help='maximum L2 norm for gradient clipping')
 
     parser.add_argument('--train_dataset', type=str, default='./datasets/pdp_7_3.pkl',
