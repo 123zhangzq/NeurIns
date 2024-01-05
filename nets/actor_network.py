@@ -98,7 +98,20 @@ class Actor(nn.Module):
                                                 fixed_action,
                                                 require_entropy = require_entropy,
                                                 do_sample = do_sample)
-            
+
+
+        ####check the action  # TODO: check the action and GI_action
+        # action_NP = action.clone().cpu().numpy()
+        # CI_action_NP = CI_action.clone().cpu().numpy()
+        #
+        # mask = torch.any(action != CI_action, dim=1)
+        #
+        # # result_tensor = torch.cat((action[mask], CI_action[mask]))
+        # result_tensor = torch.cat((action[mask], CI_action[mask]), dim=1).cpu().numpy()
+        ###
+
+
+
         if require_entropy:
             return action, log_ll.squeeze(), (h_em) if to_critic else None, entropy, CI_action
         else:
