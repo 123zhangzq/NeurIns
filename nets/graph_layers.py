@@ -875,7 +875,7 @@ class EmbeddingNet(nn.Module):
         self.embedding_dim = embedding_dim
         self.embedder = nn.Linear(node_dim, embedding_dim, bias = False)
 
-        self.pattern = self.cyclic_position_encoding_pattern(2 * seq_length, embedding_dim)
+        self.pattern = self.cyclic_position_encoding_pattern(seq_length, embedding_dim)
         
         self.init_parameters()
 
@@ -930,7 +930,7 @@ class EmbeddingNet(nn.Module):
         valid_half_size = valid_seq_length // 2  # TODO: need to change to the dynamic version, includes the two clac_stacks below
 
         # expand for every batch
-        position_enc_new = self.pattern.expand(batch_size, 2 * seq_length, embedding_dim).clone().to(solutions.device)
+        position_enc_new = self.pattern.expand(batch_size, seq_length, embedding_dim).clone().to(solutions.device)
 
         # get index according to the solutions
         visited_time = torch.zeros((batch_size,seq_length),device = solutions.device)
