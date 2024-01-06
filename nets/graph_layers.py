@@ -412,12 +412,13 @@ class Reinsertion(nn.Module):
         h_delivery = h[arange,pos_delivery].unsqueeze(1)
         h_K_neibour = h.gather(1, rec.view(batch_size, graph_size, 1).expand_as(h))
 
-        # not return to the depot
+        # not return to the depot START
         mask_last_node = (rec == 0).unsqueeze(-1).expand_as(h_K_neibour)
         h_K_neibour_P = h_K_neibour.clone()
         h_K_neibour_D = h_K_neibour.clone()
         h_K_neibour_P[mask_last_node] = h_pickup.clone().expand_as(h_K_neibour)[mask_last_node]
         h_K_neibour_D[mask_last_node] = h_delivery.clone().expand_as(h_K_neibour)[mask_last_node]
+        # not return to the depot END
 
         compatibility_pickup_pre = self.compater_insert1(h_pickup, h).permute(1,2,3,0).view(shp_p).expand(shp)
         compatibility_pickup_post = self.compater_insert2(h_pickup, h_K_neibour_P).permute(1,2,3,0).view(shp_p).expand(shp)
@@ -883,7 +884,7 @@ class EmbeddingNet(nn.Module):
         self.embedding_dim = embedding_dim
         self.embedder = nn.Linear(node_dim, embedding_dim, bias = False)
 
-        self.pattern = self.cyclic_position_encoding_pattern(seq_length, embedding_dim)
+        self.pattern = self.cyclic_position_encoding_pattern(2 * seq_length, embedding_dim)
         
         self.init_parameters()
 
@@ -938,7 +939,7 @@ class EmbeddingNet(nn.Module):
         valid_half_size = valid_seq_length // 2  # TODO: need to change to the dynamic version, includes the two clac_stacks below
 
         # expand for every batch
-        position_enc_new = self.pattern.expand(batch_size, seq_length, embedding_dim).clone().to(solutions.device)
+        position_enc_new = self.pattern.expand(batch_size, 2 * seq_length, embedding_dim).clone().to(solutions.device)
 
         # get index according to the solutions
         visited_time = torch.zeros((batch_size,seq_length),device = solutions.device)
