@@ -414,13 +414,16 @@ class Reinsertion(nn.Module):
 
         # not return to the depot
         mask_last_node = (rec == 0).unsqueeze(-1).expand_as(h_K_neibour)
-        h_K_neibour[mask_last_node] = h[mask_last_node]
-
+        h_K_neibour_P = h_K_neibour.clone()
+        h_K_neibour_D = h_K_neibour.clone()
+        h_K_neibour_P[mask_last_node] = h_pickup.clone().expand_as(h_K_neibour)[mask_last_node]
+        h_K_neibour_D[mask_last_node] = h_delivery.clone().expand_as(h_K_neibour)[mask_last_node]
 
         compatibility_pickup_pre = self.compater_insert1(h_pickup, h).permute(1,2,3,0).view(shp_p).expand(shp)
-        compatibility_pickup_post = self.compater_insert2(h_pickup, h_K_neibour).permute(1,2,3,0).view(shp_p).expand(shp)
+        compatibility_pickup_post = self.compater_insert2(h_pickup, h_K_neibour_P).permute(1,2,3,0).view(shp_p).expand(shp)
         compatibility_delivery_pre = self.compater_insert1(h_delivery, h).permute(1,2,3,0).view(shp_d).expand(shp)
-        compatibility_delivery_post = self.compater_insert2(h_delivery, h_K_neibour).permute(1,2,3,0).view(shp_d).expand(shp)
+        compatibility_delivery_post = self.compater_insert2(h_delivery, h_K_neibour_D).permute(1,2,3,0).view(shp_d).expand(shp)
+
 
         # p and d insert after the same node
         diag_indices = torch.arange(graph_size)
