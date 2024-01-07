@@ -49,6 +49,9 @@ def get_options(args=None):
 
     parser.add_argument('--train_dataset', type=str, default='./datasets/pdp_7_3.pkl',
                         help='dataset file path for training')
+    parser.add_argument('--epsilon', type=float, default=1, help='initial epsilon for e-greedy for action sampling in decoder')
+    parser.add_argument('--epsilon_decay', type=float, default=0.005,
+                        help='decay rate of epsilon for e-greedy for action sampling in decoder')
     
     # Inference and validation parameters
     parser.add_argument('--T_max', type=int, default=1500, help='number of steps for inference')

@@ -336,6 +336,9 @@ def train_batch(
     T = opts.T_train
     K_epochs = opts.K_epochs
     eps_clip = opts.eps_clip
+    epsilon = opts.epsilon   # e-greedy for decoder sampling action
+    epsilon_decay = opts.epsilon_decay
+    epsilon_info = (epsilon, epsilon_decay, epoch)
 
     initial_cost = obj
     
@@ -364,6 +367,7 @@ def train_batch(
                                                              batch_feature,
                                                              padded_solution,
                                                              step_info,
+                                                             epsilon_info = epsilon_info,
                                                              do_sample = True,
                                                              require_entropy = True,# take same action
                                                              to_critic = True)
