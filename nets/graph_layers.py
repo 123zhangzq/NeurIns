@@ -566,7 +566,10 @@ class MultiHeadDecoder(nn.Module):
         
         arange = torch.arange(bs)
 
-        h = self.project_node(h_em) + self.project_graph(h_em.max(1)[0])[:, None, :].expand(bs, gs, dim)
+        # w/ or w/o graph embedding
+        # h = self.project_node(h_em) + self.project_graph(h_em.max(1)[0])[:, None, :].expand(bs, gs, dim)
+        h = h_em
+        
 
         ############# action1 removal
         # if TYPE_REMOVAL == 'N2S':
