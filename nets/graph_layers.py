@@ -690,6 +690,7 @@ class MultiHeadDecoder(nn.Module):
 
                 # e-greedy sample one action
                 epsilon, epsilon_decay, epoch = epsilon_info
+                epoch -= 1000
                 epsilon = epsilon * np.exp(-epsilon_decay * epoch)
                 action_reinsertion_sample = probs_reinsertion.multinomial(1)
                 action_reinsertion_greedy = probs_reinsertion.max(-1)[1].unsqueeze(1)
