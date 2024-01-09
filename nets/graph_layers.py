@@ -981,6 +981,14 @@ class EmbeddingNet(nn.Module):
 
         index = (visited_time % valid_seq_length).long().unsqueeze(-1).expand(batch_size, seq_length, embedding_dim)
 
+        # padding nodes
+        start_padding_p = seq_length - dy_size + dy_t
+        end_padding_p = int(seq_length - dy_size + dy_size/2)
+        start_padding_d = end_padding_p + dy_t
+        end_padding_d = seq_length - dy_size + dy_size
+        index[:,start_padding_p:end_padding_p,:] = int(valid_seq_length+1)
+        index[:, start_padding_d:end_padding_d, :] = int(valid_seq_length+1)
+
         # return
         return torch.gather(position_enc_new, 1, index), visited_time.long(), top2 if clac_stacks else None
 
