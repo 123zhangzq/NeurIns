@@ -1013,6 +1013,7 @@ class EmbeddingNet(nn.Module):
 
         index = (visited_time % valid_seq_length).long().unsqueeze(-1).expand(batch_size, seq_length, embedding_dim)
 
+
         # padding not-inserted nodes
         padding_mask = torch.zeros_like(index, dtype=torch.bool)
         padding_mask[:,start_padding_p:end_padding_p,:] = True
@@ -1023,7 +1024,19 @@ class EmbeddingNet(nn.Module):
 
 
         # return
-        return torch.gather(position_enc_new, 1, index), visited_time.long(), top2 if clac_stacks else None
+        # valid_pos_enc = position_enc_new[:, :valid_seq_length, :]
+        # pos_enc_mean = torch.mean(valid_pos_enc, dim=1, keepdim=True)
+        PE = torch.gather(position_enc_new, 1, index)
+        
+        # PE[:,start_padding_p:end_padding_p,:] = pos_enc_mean
+        # PE[:,start_padding_d:end_padding_d,:] = pos_enc_mean
+        # PE[:, start_padding_p, :] = pos_enc_mean[:, 0, :]
+        # PE[:, start_padding_d, :] = pos_enc_mean[:, 0, :]
+        PE[:, start_padding_p, :] = PE[:, 0, :]
+        PE[:, start_padding_d, :] = PE[:, 0, :]
+
+
+        return PE, visited_time.long(), top2 if clac_stacks else None
 
         
     def forward(self, x, solutions, step_info, clac_stacks = False):
