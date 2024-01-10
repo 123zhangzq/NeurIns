@@ -1024,16 +1024,15 @@ class EmbeddingNet(nn.Module):
 
 
         # return
-        # valid_pos_enc = position_enc_new[:, :valid_seq_length, :]
-        # pos_enc_mean = torch.mean(valid_pos_enc, dim=1, keepdim=True)
+        valid_pos_enc = position_enc_new[:, :valid_seq_length, :]
+        pos_enc_mean = torch.mean(valid_pos_enc, dim=1, keepdim=True)
         PE = torch.gather(position_enc_new, 1, index)
-        
+
         # PE[:,start_padding_p:end_padding_p,:] = pos_enc_mean
         # PE[:,start_padding_d:end_padding_d,:] = pos_enc_mean
-        # PE[:, start_padding_p, :] = pos_enc_mean[:, 0, :]
-        # PE[:, start_padding_d, :] = pos_enc_mean[:, 0, :]
-        PE[:, start_padding_p, :] = PE[:, 0, :]
-        PE[:, start_padding_d, :] = PE[:, 0, :]
+        PE[:, start_padding_p, :] = pos_enc_mean[:, 0, :]
+        PE[:, start_padding_d, :] = pos_enc_mean[:, 0, :]
+    
 
 
         return PE, visited_time.long(), top2 if clac_stacks else None
