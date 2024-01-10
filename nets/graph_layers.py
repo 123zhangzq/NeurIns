@@ -969,32 +969,32 @@ class EmbeddingNet(nn.Module):
         end_padding_p = int(seq_length - dy_size + dy_size / 2)
         start_padding_d = end_padding_p + dy_t
         end_padding_d = seq_length - dy_size + dy_size
-        padding_pos = torch.zeros((batch_size, seq_length, embedding_dim),device = solutions.device)  # this one
-        padding_cur_dis = torch.zeros((batch_size, seq_length),device = solutions.device).long() + 1e5
+        # padding_pos = torch.zeros((batch_size, seq_length, embedding_dim),device = solutions.device)  # this one
+        # padding_cur_dis = torch.zeros((batch_size, seq_length),device = solutions.device).long() + 1e5
 
         for i in range(valid_seq_length):
-            # find the nearest node for padding not-inserted pickup nodes
-            coor_1 = x[arange, start_padding_p:end_padding_p, :]
-            coor_2 = x[arange, pre, :].unsqueeze(1).expand(-1, int(dy_size/2-dy_t), -1)
-            distance_cur = torch.norm(coor_1 - coor_2, p=2, dim=2).to(solutions.device)
-            min_dis = torch.min(padding_cur_dis[:, start_padding_p:end_padding_p], distance_cur[:, :]).to(solutions.device)
-            mask = (distance_cur[:, :] < padding_cur_dis[:, start_padding_p:end_padding_p]).unsqueeze(2).expand(-1, -1, embedding_dim).to(solutions.device)
-            expanded_mask = torch.zeros_like(padding_pos, dtype=torch.bool).to(solutions.device)
-            expanded_mask[:, start_padding_p:end_padding_p] = mask
-            pre_exp = pre.unsqueeze(1).unsqueeze(2).expand(-1, seq_length, embedding_dim)
-            padding_pos = torch.where(expanded_mask, pre_exp, padding_pos)
-            padding_cur_dis[:, start_padding_p:end_padding_p] = min_dis
-            # find the nearest node for padding not-inserted delivery nodes
-            coor_1 = x[arange, start_padding_d:end_padding_d, :]
-            coor_2 = x[arange, pre, :].unsqueeze(1).expand(-1, int(dy_size/2-dy_t), -1)
-            distance_cur = torch.norm(coor_1 - coor_2, p=2, dim=2).to(solutions.device)
-            min_dis = torch.min(padding_cur_dis[:, start_padding_d:end_padding_d], distance_cur[:, :]).to(solutions.device)
-            mask = (distance_cur[:, :] < padding_cur_dis[:, start_padding_d:end_padding_d]).unsqueeze(2).expand(-1, -1, embedding_dim).to(solutions.device)
-            expanded_mask = torch.zeros_like(padding_pos, dtype=torch.bool).to(solutions.device)
-            expanded_mask[:, start_padding_d:end_padding_d] = mask
-            pre_exp = pre.unsqueeze(1).unsqueeze(2).expand(-1, seq_length, embedding_dim)
-            padding_pos = torch.where(expanded_mask, pre_exp, padding_pos)
-            padding_cur_dis[:, start_padding_d:end_padding_d] = min_dis
+            # # find the nearest node for padding not-inserted pickup nodes
+            # coor_1 = x[arange, start_padding_p:end_padding_p, :]
+            # coor_2 = x[arange, pre, :].unsqueeze(1).expand(-1, int(dy_size/2-dy_t), -1)
+            # distance_cur = torch.norm(coor_1 - coor_2, p=2, dim=2).to(solutions.device)
+            # min_dis = torch.min(padding_cur_dis[:, start_padding_p:end_padding_p], distance_cur[:, :]).to(solutions.device)
+            # mask = (distance_cur[:, :] < padding_cur_dis[:, start_padding_p:end_padding_p]).unsqueeze(2).expand(-1, -1, embedding_dim).to(solutions.device)
+            # expanded_mask = torch.zeros_like(padding_pos, dtype=torch.bool).to(solutions.device)
+            # expanded_mask[:, start_padding_p:end_padding_p] = mask
+            # pre_exp = pre.unsqueeze(1).unsqueeze(2).expand(-1, seq_length, embedding_dim)
+            # padding_pos = torch.where(expanded_mask, pre_exp, padding_pos)
+            # padding_cur_dis[:, start_padding_p:end_padding_p] = min_dis
+            # # find the nearest node for padding not-inserted delivery nodes
+            # coor_1 = x[arange, start_padding_d:end_padding_d, :]
+            # coor_2 = x[arange, pre, :].unsqueeze(1).expand(-1, int(dy_size/2-dy_t), -1)
+            # distance_cur = torch.norm(coor_1 - coor_2, p=2, dim=2).to(solutions.device)
+            # min_dis = torch.min(padding_cur_dis[:, start_padding_d:end_padding_d], distance_cur[:, :]).to(solutions.device)
+            # mask = (distance_cur[:, :] < padding_cur_dis[:, start_padding_d:end_padding_d]).unsqueeze(2).expand(-1, -1, embedding_dim).to(solutions.device)
+            # expanded_mask = torch.zeros_like(padding_pos, dtype=torch.bool).to(solutions.device)
+            # expanded_mask[:, start_padding_d:end_padding_d] = mask
+            # pre_exp = pre.unsqueeze(1).unsqueeze(2).expand(-1, seq_length, embedding_dim)
+            # padding_pos = torch.where(expanded_mask, pre_exp, padding_pos)
+            # padding_cur_dis[:, start_padding_d:end_padding_d] = min_dis
 
             # calculate visited_time
             current_nodes = solutions[arange,pre]
@@ -1015,10 +1015,10 @@ class EmbeddingNet(nn.Module):
 
 
         # padding not-inserted nodes
-        padding_mask = torch.zeros_like(index, dtype=torch.bool)
-        padding_mask[:,start_padding_p:end_padding_p,:] = True
-        padding_mask[:,start_padding_d:end_padding_d,:] = True
-        index = torch.where(padding_mask, padding_pos, index).long()
+        # padding_mask = torch.zeros_like(index, dtype=torch.bool)
+        # padding_mask[:,start_padding_p:end_padding_p,:] = True
+        # padding_mask[:,start_padding_d:end_padding_d,:] = True
+        # index = torch.where(padding_mask, padding_pos, index).long()
         #index[:,start_padding_p:end_padding_p,:] = int()
         #index[:, start_padding_d:end_padding_d, :] = int()
 
@@ -1028,12 +1028,11 @@ class EmbeddingNet(nn.Module):
         pos_enc_mean = torch.mean(valid_pos_enc, dim=1, keepdim=True)
         PE = torch.gather(position_enc_new, 1, index)
 
-        # PE[:,start_padding_p:end_padding_p,:] = pos_enc_mean
-        # PE[:,start_padding_d:end_padding_d,:] = pos_enc_mean
-        PE[:, start_padding_p, :] = pos_enc_mean[:, 0, :]
-        PE[:, start_padding_d, :] = pos_enc_mean[:, 0, :]
+        PE[:,start_padding_p:end_padding_p,:] = pos_enc_mean
+        PE[:,start_padding_d:end_padding_d,:] = pos_enc_mean
+        # PE[:, start_padding_p, :] = pos_enc_mean[:, 0, :]
+        # PE[:, start_padding_d, :] = pos_enc_mean[:, 0, :]
     
-
 
         return PE, visited_time.long(), top2 if clac_stacks else None
 
