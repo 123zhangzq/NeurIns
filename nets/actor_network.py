@@ -60,7 +60,7 @@ class Actor(nn.Module):
                                 self.hidden_dim,
                                 self.normalization,
                                 )
-            for _ in range(self.n_layers - 1))) # for the following layers of NFEs
+            for _ in range(self.n_layers))) # for the following layers of NFEs
 
         self.pos_encoder = MultiHeadPosCompat(self.n_heads_actor, 
                                 self.embedding_dim, 
@@ -86,8 +86,9 @@ class Actor(nn.Module):
         h_embed, h_pos, visited_time, top2 = self.embedder(x_in, solution, step_info, self.clac_stacks)
         
         # pass through encoder
-        pos_em = self.pos_encoder(h_pos)
-        h_em = self.encoder_l1(h_embed, pos_em)[0]
+        # pos_em = self.pos_encoder(h_pos)
+        # h_em = self.encoder_l1(h_embed, pos_em)[0]
+        h_em = h_embed + h_pos
         h_em = self.encoder_l2n(h_em)
         
         if only_critic:
