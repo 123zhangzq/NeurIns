@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from nets.graph_layers import MultiHeadEncoder, MultiHeadDecoder, EmbeddingNet, MultiHeadPosCompat
+from nets.graph_layers import MultiHeadEncoder_1, MultiHeadEncoder, MultiHeadDecoder, EmbeddingNet, MultiHeadPosCompat
 
 class mySequential(nn.Sequential):
     def forward(self, *inputs):
@@ -46,14 +46,22 @@ class Actor(nn.Module):
                             self.embedding_dim,
                             self.seq_length)
         
-        self.encoder = mySequential(*(
-                MultiHeadEncoder(self.n_heads_actor, 
-                                self.embedding_dim, 
-                                self.hidden_dim, 
+        self.encoder_l1 = mySequential(*(
+                MultiHeadEncoder_1(self.n_heads_actor,
+                                self.embedding_dim,
+                                self.hidden_dim,
                                 self.normalization,
                                 )
-            for _ in range(self.n_layers))) # for NFEs
-        
+            for _ in range(1))) # for first layer of NFEs
+
+        self.encoder_l2n = mySequential(*(
+                MultiHeadEncoder(self.n_heads_actor,
+                                self.embedding_dim,
+                                self.hidden_dim,
+                                self.normalization,
+                                )
+            for _ in range(self.n_layers - 1))) # for the following layers of NFEs
+
         self.pos_encoder = MultiHeadPosCompat(self.n_heads_actor, 
                                 self.embedding_dim, 
                                 self.hidden_dim, 
@@ -79,7 +87,8 @@ class Actor(nn.Module):
         
         # pass through encoder
         pos_em = self.pos_encoder(h_pos)
-        h_em = self.encoder(h_embed, pos_em)[0]
+        h_em = self.encoder_l1(h_embed, pos_em)[0]
+        h_em = self.encoder_l2n(h_em)
         
         if only_critic:
             return (h_em)

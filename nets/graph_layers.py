@@ -799,7 +799,7 @@ class Normalization(nn.Module):
             assert self.normalizer is None, "Unknown normalizer type"
             return input
 
-class MultiHeadEncoder(nn.Module):
+class MultiHeadEncoder_1(nn.Module):
 
     def __init__(
             self,
@@ -808,9 +808,9 @@ class MultiHeadEncoder(nn.Module):
             feed_forward_hidden,
             normalization='layer',
     ):
-        super(MultiHeadEncoder, self).__init__()
+        super(MultiHeadEncoder_1, self).__init__()
         
-        self.MHA_sublayer = MultiHeadAttentionsubLayer(
+        self.MHA_sublayer = MultiHeadAttentionsubLayer_1(
                         n_heads,
                         embed_dim,
                         feed_forward_hidden,
@@ -827,9 +827,9 @@ class MultiHeadEncoder(nn.Module):
     def forward(self, input1, input2):
         out1, out2 = self.MHA_sublayer(input1, input2)
         return self.FFandNorm_sublayer(out1), out2
-    
-    
-class MultiHeadAttentionsubLayer(nn.Module):
+
+
+class MultiHeadEncoder(nn.Module):
 
     def __init__(
             self,
@@ -838,7 +838,36 @@ class MultiHeadAttentionsubLayer(nn.Module):
             feed_forward_hidden,
             normalization='layer',
     ):
-        super(MultiHeadAttentionsubLayer, self).__init__()
+        super(MultiHeadEncoder, self).__init__()
+
+        self.MHA_sublayer = MultiHeadAttentionsubLayer(
+            n_heads,
+            embed_dim,
+            feed_forward_hidden,
+            normalization=normalization,
+        )
+
+        self.FFandNorm_sublayer = FFandNormsubLayer(
+            n_heads,
+            embed_dim,
+            feed_forward_hidden,
+            normalization=normalization,
+        )
+
+    def forward(self, input):
+        out = self.MHA_sublayer(input)
+        return self.FFandNorm_sublayer(out)
+    
+class MultiHeadAttentionsubLayer_1(nn.Module):
+
+    def __init__(
+            self,
+            n_heads,
+            embed_dim,
+            feed_forward_hidden,
+            normalization='layer',
+    ):
+        super(MultiHeadAttentionsubLayer_1, self).__init__()
         
         self.MHA = MultiHeadAttentionNew(
                     n_heads,
@@ -854,6 +883,33 @@ class MultiHeadAttentionsubLayer(nn.Module):
         
         # Normalization
         return self.Norm(out1 + input1), out2
+
+
+class MultiHeadAttentionsubLayer(nn.Module):
+
+    def __init__(
+            self,
+            n_heads,
+            embed_dim,
+            feed_forward_hidden,
+            normalization='layer',
+    ):
+        super(MultiHeadAttentionsubLayer, self).__init__()
+
+        self.MHA = MultiHeadAttention(
+            n_heads,
+            input_dim=embed_dim,
+            embed_dim=embed_dim
+        )
+
+        self.Norm = Normalization(embed_dim, normalization)
+
+    def forward(self, input):
+        # Attention and Residual connection
+        out = self.MHA(input)
+
+        # Normalization
+        return self.Norm(out + input)
    
 class FFandNormsubLayer(nn.Module):
 
