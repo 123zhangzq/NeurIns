@@ -1021,10 +1021,10 @@ class EmbeddingNet(nn.Module):
             stacks[arange, pre] = 0  # fix bug: topk is not stable sorting
 
         # padding not-inserted nodes
-        start_padding_p = seq_length - dy_size + dy_t
-        end_padding_p = int(seq_length - dy_size + dy_size / 2)
-        start_padding_d = end_padding_p + dy_t
-        end_padding_d = seq_length - dy_size + dy_size
+        # start_padding_p = seq_length - dy_size + dy_t
+        # end_padding_p = int(seq_length - dy_size + dy_size / 2)
+        # start_padding_d = end_padding_p + dy_t
+        # end_padding_d = seq_length - dy_size + dy_size
         # padding_pos = torch.zeros((batch_size, seq_length, embedding_dim),device = solutions.device)  # this one
         # padding_cur_dis = torch.zeros((batch_size, seq_length),device = solutions.device).long() + 1e5
 
@@ -1070,7 +1070,7 @@ class EmbeddingNet(nn.Module):
         index = (visited_time % valid_seq_length).long().unsqueeze(-1).expand(batch_size, seq_length, embedding_dim)
 
 
-        # padding not-inserted nodes
+        # padding not-inserted nodes to other nodes PE
         # padding_mask = torch.zeros_like(index, dtype=torch.bool)
         # padding_mask[:,start_padding_p:end_padding_p,:] = True
         # padding_mask[:,start_padding_d:end_padding_d,:] = True
@@ -1079,15 +1079,16 @@ class EmbeddingNet(nn.Module):
         #index[:, start_padding_d:end_padding_d, :] = int()
 
 
-        # return
-        valid_pos_enc = position_enc_new[:, :valid_seq_length, :]
-        pos_enc_mean = torch.mean(valid_pos_enc, dim=1, keepdim=True)
+        # make PE return
         PE = torch.gather(position_enc_new, 1, index)
 
-        PE[:,start_padding_p:end_padding_p,:] = pos_enc_mean
-        PE[:,start_padding_d:end_padding_d,:] = pos_enc_mean
-        # PE[:, start_padding_p, :] = pos_enc_mean[:, 0, :]
-        # PE[:, start_padding_d, :] = pos_enc_mean[:, 0, :]
+        # padding not-inserted nodes with mean of PE
+        # valid_pos_enc = position_enc_new[:, :valid_seq_length, :]
+        # pos_enc_mean = torch.mean(valid_pos_enc, dim=1, keepdim=True)
+        # PE[:,start_padding_p:end_padding_p,:] = pos_enc_mean
+        # PE[:,start_padding_d:end_padding_d,:] = pos_enc_mean
+        # # PE[:, start_padding_p, :] = pos_enc_mean[:, 0, :]
+        # # PE[:, start_padding_d, :] = pos_enc_mean[:, 0, :]
     
 
         return PE, visited_time.long(), top2 if clac_stacks else None
