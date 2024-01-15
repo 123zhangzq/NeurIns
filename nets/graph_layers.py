@@ -518,7 +518,8 @@ class MultiHeadDecoder(nn.Module):
 
         bs, gs, dim = h_em.size()
         dy_half_pos =  dy_size // 2
-        
+        dy_pos = gs - dy_size + dy_t
+
         arange = torch.arange(bs)
 
         # w/ or w/o graph embedding
@@ -531,11 +532,15 @@ class MultiHeadDecoder(nn.Module):
             action_removal_table = torch.tanh(self.select_order(h).squeeze()) * self.range
 
             # mask the other nodes apart from candidates
-            dy_pos = gs - dy_size + dy_t
             dy_delivery = int(gs - dy_size + dy_size / 2)
-            action_removal_table[arange, :dy_pos] = -1e20
+
+            action_removal_table[arange, :int(gs - dy_size)] = -1e20
             action_removal_table[arange, dy_delivery:] = -1e20
-            
+
+            mask_selected = np.zeros((bs, gs,), dtype=bool)
+            mask_selected[solutions != 0] = True
+            action_removal_table[mask_selected] = -1e20
+
             log_ll_removal = F.log_softmax(action_removal_table, dim = -1) if self.training and TYPE_REMOVAL == 'N2S' else None
             probs_removal = F.softmax(action_removal_table, dim = -1)
         elif TYPE_REMOVAL == 'random':
