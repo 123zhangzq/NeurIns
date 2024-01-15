@@ -570,9 +570,7 @@ class MultiHeadDecoder(nn.Module):
                 else:
                     action_removal = probs_removal.max(-1)[1].unsqueeze(1)
 
-        ###
-        probs_removal_NP = probs_removal.clone().cpu().detach().numpy()
-        ###
+
         selected_log_ll_action1 = log_ll_removal.gather(1, action_removal) if self.training and TYPE_REMOVAL == 'N2S' else torch.tensor(0).to(h.device)
 
         if action_his is not None:
