@@ -294,7 +294,8 @@ class LinearSelect(nn.Module):
         super(LinearSelect, self).__init__()
         self.embed_dim = embed_dim
         
-        self.agg = MLP(self.embed_dim, 64, 64, 1, 0)
+        # self.agg = MLP(self.embed_dim, 64, 64, 1, 0)
+        self.proj = nn.Linear(self.embed_dim, 1, bias=False)
 
         self.init_parameters()
 
@@ -306,7 +307,7 @@ class LinearSelect(nn.Module):
 
     def forward(self, h):
 
-        compatibility_pairing = self.agg(h).squeeze()
+        compatibility_pairing = self.proj(h).squeeze()
         
         return  compatibility_pairing
 
