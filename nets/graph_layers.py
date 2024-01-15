@@ -547,8 +547,6 @@ class MultiHeadDecoder(nn.Module):
             probs_removal = torch.rand(bs, gs//2).to(h_em.device)
         else:
             pass
-
-
             # epi-greedy
             # first_row = torch.arange(gs, device = solutions.device).long().unsqueeze(0).expand(bs, gs)
             # d_i =  x_in.gather(1, first_row.unsqueeze(-1).expand(bs, gs, 2))
@@ -567,7 +565,14 @@ class MultiHeadDecoder(nn.Module):
                 # action_removal_greedy = probs_removal.max(-1)[1].unsqueeze(1)
                 # action_removal = torch.where(torch.rand(bs,1).to(h_em.device) < 0.1, action_removal_random, action_removal_greedy)
             else:
-                action_removal = probs_removal.multinomial(1)
+                if do_sample:
+                    action_removal = probs_removal.multinomial(1)
+                else:
+                    action_removal = probs_removal.max(-1)[1].unsqueeze(1)
+
+        ###
+        probs_removal_NP = probs_removal.clone().cpu().detach().numpy()
+        ###
         selected_log_ll_action1 = log_ll_removal.gather(1, action_removal) if self.training and TYPE_REMOVAL == 'N2S' else torch.tensor(0).to(h.device)
 
         if action_his is not None:

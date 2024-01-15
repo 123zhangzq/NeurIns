@@ -46,10 +46,6 @@ class PDTSP(object):
         mask[torch.arange(bs),:,selected_node.view(-1)] = True
         mask[torch.arange(bs),:,selected_node_corresponding.view(-1)] = True
 
-        ###
-        mask_NP_B = mask.clone().cpu().numpy()
-        ###
-
         # mask the un-inserted dynamic orders
         dy_orders_ind = gs - dy_size
         dy_orders_end = gs - dy_size + dy_size // 2
