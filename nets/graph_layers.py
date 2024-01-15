@@ -512,7 +512,7 @@ class MultiHeadDecoder(nn.Module):
             param.data.uniform_(-stdv, stdv)
         
         
-    def forward(self, problem, h_em, solutions, step_info, x_in, top2, visited_order_map, epsilon_info = None, fixed_action = None, require_entropy = False, do_sample = True):
+    def forward(self, problem, h_em, solutions, action_his, step_info, x_in, top2, visited_order_map, epsilon_info = None, fixed_action = None, require_entropy = False, do_sample = True):
         # size info
         dy_size, dy_t = step_info
 
@@ -537,7 +537,7 @@ class MultiHeadDecoder(nn.Module):
             action_removal_table[arange, :int(gs - dy_size)] = -1e20
             action_removal_table[arange, dy_delivery:] = -1e20
 
-            mask_selected = np.zeros((bs, gs,), dtype=bool).to(h.device)
+            mask_selected = torch.zeros_like(action_removal_table, dtype=torch.bool, device=action_removal_table.device)
             mask_selected[solutions != 0] = True
             action_removal_table[mask_selected] = -1e20
 
@@ -570,6 +570,9 @@ class MultiHeadDecoder(nn.Module):
                 action_removal = probs_removal.multinomial(1)
         selected_log_ll_action1 = log_ll_removal.gather(1, action_removal) if self.training and TYPE_REMOVAL == 'N2S' else torch.tensor(0).to(h.device)
 
+        if action_his is not None:
+            action_his.scatter_(1, action_removal, True)
+            action_his.scatter_(1, action_removal + dy_half_pos, True)
 
         ############ action1 select dynamic orders by sequence
         # dy_pos = gs - dy_size + dy_t
@@ -578,7 +581,7 @@ class MultiHeadDecoder(nn.Module):
         ############# action2 insert into current routes
         pos_pickup = action_removal.view(-1)
         pos_delivery = pos_pickup + dy_half_pos
-        mask_table = problem.get_swap_mask(action_removal, visited_order_map, step_info, top2).expand(bs, gs, gs).cpu()
+        mask_table = problem.get_swap_mask(action_removal, visited_order_map, step_info, action_his, top2).expand(bs, gs, gs).cpu()
         if TYPE_REINSERTION == 'N2S':
             action_reinsertion_table = torch.tanh(self.compater_reinsertion(h, pos_pickup, pos_delivery, solutions, mask_table)) * self.range
         elif TYPE_REINSERTION == 'random':
@@ -637,6 +640,7 @@ class MultiHeadDecoder(nn.Module):
         action_reinsertion_table = action_reinsertion_table.view(bs, -1)
         log_ll_reinsertion = F.log_softmax(action_reinsertion_table, dim = -1) if self.training and TYPE_REINSERTION == 'N2S' else None
         probs_reinsertion = F.softmax(action_reinsertion_table, dim = -1)
+
         # fixed action
         if fixed_action is not None:
             p_selected = fixed_action[:,1]
