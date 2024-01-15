@@ -537,7 +537,7 @@ class MultiHeadDecoder(nn.Module):
             action_removal_table[arange, :int(gs - dy_size)] = -1e20
             action_removal_table[arange, dy_delivery:] = -1e20
 
-            mask_selected = np.zeros((bs, gs,), dtype=bool)
+            mask_selected = np.zeros((bs, gs,), dtype=bool).to(h.device)
             mask_selected[solutions != 0] = True
             action_removal_table[mask_selected] = -1e20
 
