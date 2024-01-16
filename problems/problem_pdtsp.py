@@ -232,7 +232,7 @@ class PDTSP(object):
         print("check all the feasibilities!!!")
     
     
-    def get_swap_mask(self, selected_node, visited_order_map, step_info, action_his, top2=None):
+    def get_swap_mask(self, selected_node, visited_order_map, step_info, action_his):
         return self.get_real_mask(selected_node, visited_order_map, step_info, action_his)
         
     

@@ -141,6 +141,27 @@ class MultiHeadAttentionNew(nn.Module):
             stdv = 1. / math.sqrt(param.size(-1))
             param.data.uniform_(-stdv, stdv)
 
+    # 旋转位置编码计算
+    def apply_rotary_emb(self,
+            xq: torch.Tensor,
+            xk: torch.Tensor,
+            freqs_cis: torch.Tensor,
+    ):
+        # xq.shape = [batch_size, seq_len, dim]
+        # xq_.shape = [batch_size, seq_len, dim // 2, 2]
+        xq_ = xq.float().reshape(*xq.shape[:-1], -1, 2)
+        xk_ = xk.float().reshape(*xk.shape[:-1], -1, 2)
+
+        # 转为复数域
+        xq_ = torch.view_as_complex(xq_)
+        xk_ = torch.view_as_complex(xk_)
+
+        # 应用旋转操作，然后将结果转回实数域
+        # xq_out.shape = [batch_size, seq_len, dim]
+        xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(2)
+        xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(2)
+        return xq_out.type_as(xq), xk_out.type_as(xk)
+
     def forward(self, h, out_source_attn):
         
         # h should be (batch_size, graph_size, input_dim)
@@ -149,26 +170,22 @@ class MultiHeadAttentionNew(nn.Module):
         hflat = h.contiguous().view(-1, input_dim)
 
         # last dimension can be different for keys and values
-        shp = (4, batch_size, graph_size, -1)
+        shp = (batch_size, graph_size, -1)
 
         # Calculate queries, (n_heads, n_query, graph_size, key/val_size)
         Q = torch.matmul(hflat, self.W_query).view(shp)
         K = torch.matmul(hflat, self.W_key).view(shp)   
         V = torch.matmul(hflat, self.W_val).view(shp)
 
-        # Calculate compatibility (n_heads, bastch_size, n_query, graph_size)
-        compatibility = torch.cat((torch.matmul(Q, K.transpose(2, 3)), out_source_attn), 0)
-        
-        attn_raw = compatibility.permute(1,2,3,0)
-        attn = self.score_aggr(attn_raw).permute(3,0,1,2)
-        heads = torch.matmul(F.softmax(attn, dim=-1), V)
+        # attention 操作之前，应用旋转位置编码
+        Q, K = self.apply_rotary_emb(Q, K, out_source_attn)
 
-        out = torch.mm(
-            heads.permute(1, 2, 0, 3).contiguous().view(-1, self.n_heads * self.val_dim),
-            self.W_out.view(-1, self.embed_dim)
-        ).view(batch_size, graph_size, self.embed_dim)
+        scores = torch.matmul(Q, K.transpose(1, 2)) / math.sqrt(input_dim)
+        scores = F.softmax(scores.float(), dim=-1)
+        output = torch.matmul(scores, V)
 
-        return out, out_source_attn
+
+        return output, out_source_attn
 
 class MultiHeadPosCompat(nn.Module):
     def __init__(
@@ -513,7 +530,7 @@ class MultiHeadDecoder(nn.Module):
             param.data.uniform_(-stdv, stdv)
         
         
-    def forward(self, problem, h_em, solutions, action_his, step_info, x_in, top2, visited_order_map, epsilon_info = None, fixed_action = None, require_entropy = False, do_sample = True):
+    def forward(self, problem, h_em, solutions, action_his, step_info, x_in, visited_order_map, epsilon_info = None, fixed_action = None, require_entropy = False, do_sample = True):
         # size info
         dy_size, dy_t = step_info
 
@@ -585,7 +602,7 @@ class MultiHeadDecoder(nn.Module):
         ############# action2 insert into current routes
         pos_pickup = action_removal.view(-1)
         pos_delivery = pos_pickup + dy_half_pos
-        mask_table = problem.get_swap_mask(action_removal, visited_order_map, step_info, action_his, top2).expand(bs, gs, gs).cpu()
+        mask_table = problem.get_swap_mask(action_removal, visited_order_map, step_info, action_his).expand(bs, gs, gs).cpu()
         if TYPE_REINSERTION == 'N2S':
             action_reinsertion_table = torch.tanh(self.compater_reinsertion(h, pos_pickup, pos_delivery, solutions, mask_table)) * self.range
         elif TYPE_REINSERTION == 'random':
@@ -766,7 +783,7 @@ class Normalization(nn.Module):
             assert self.normalizer is None, "Unknown normalizer type"
             return input
 
-class MultiHeadEncoder_1(nn.Module):
+class AttentionEncoder_1(nn.Module):
 
     def __init__(
             self,
@@ -775,8 +792,8 @@ class MultiHeadEncoder_1(nn.Module):
             feed_forward_hidden,
             normalization='layer',
     ):
-        super(MultiHeadEncoder_1, self).__init__()
-        
+        super(AttentionEncoder_1, self).__init__()
+
         self.MHA_sublayer = MultiHeadAttentionsubLayer_1(
                         n_heads,
                         embed_dim,
@@ -919,8 +936,9 @@ class EmbeddingNet(nn.Module):
         self.embedding_dim = embedding_dim
         self.embedder = nn.Linear(node_dim, embedding_dim, bias = False)
 
-        self.pattern = self.cyclic_position_encoding_pattern(2 * seq_length, embedding_dim)
-        
+        # self.pattern = self.cyclic_position_encoding_pattern(2 * seq_length, embedding_dim)
+        self.seq_length = seq_length
+
         self.init_parameters()
 
     def init_parameters(self):
@@ -928,44 +946,9 @@ class EmbeddingNet(nn.Module):
         for param in self.parameters():
             stdv = 1. / math.sqrt(param.size(-1))
             param.data.uniform_(-stdv, stdv)
-            
-    def basesin(self, x, T, fai = 0):
-        return np.sin(2 * np.pi / T * np.abs(np.mod(x, 2 * T) - T) + fai)
-    
-    def basecos(self, x, T, fai = 0):
-        return np.cos(2 * np.pi / T * np.abs(np.mod(x, 2 * T) - T) + fai)
-    
-    def cyclic_position_encoding_pattern(self, n_position, emb_dim, mean_pooling = True):
-        
-        Td_set = np.linspace(np.power(n_position, 1 / (emb_dim // 2)), n_position, emb_dim // 2, dtype = 'int')
-        x = np.zeros((n_position, emb_dim))
-         
-        for i in range(emb_dim):
-            Td = Td_set[i //3 * 3 + 1] if  (i //3 * 3 + 1) < (emb_dim // 2) else Td_set[-1]
-            fai = 0 if i <= (emb_dim // 2) else  2 * np.pi * ((-i + (emb_dim // 2)) / (emb_dim // 2))
-            longer_pattern = np.arange(0, np.ceil((n_position) / Td) * Td, 0.01)
-            if i % 2 ==1:
-                x[:,i] = self.basecos(longer_pattern, Td, fai)[np.linspace(0, len(longer_pattern), n_position, dtype = 'int', endpoint = False)]
-            else:
-                x[:,i] = self.basesin(longer_pattern, Td, fai)[np.linspace(0, len(longer_pattern), n_position, dtype = 'int', endpoint = False)]
-                
-        pattern = torch.from_numpy(x).type(torch.FloatTensor)
-        pattern_sum = torch.zeros_like(pattern)
 
-        # averaging the adjacient embeddings if needed (optional, almost the same performance)
-        arange = torch.arange(n_position)
-        pooling = [0] if not mean_pooling else[-2, -1, 0, 1, 2]
-        time = 0
-        for i in pooling:
-            time += 1
-            index = (arange + i + n_position) % n_position
-            pattern_sum += pattern.gather(0, index.view(-1,1).expand_as(pattern))
-        pattern = 1. / time * pattern_sum - pattern.mean(0)
-        #### ---- 
-        
-        return pattern    
 
-    def position_encoding(self, x, solutions, step_info, embedding_dim, clac_stacks = False):
+    def get_visited_time(self, solutions, step_info):
         # size info
         dy_size, dy_t = step_info
         batch_size, seq_length = solutions.size()
@@ -973,98 +956,50 @@ class EmbeddingNet(nn.Module):
         valid_seq_length = seq_length - dy_size + 2 * dy_t
         valid_half_size = valid_seq_length // 2  # TODO: need to change to the dynamic version, includes the two clac_stacks below
 
-        # expand for every batch
-        position_enc_new = self.pattern.expand(batch_size, 2 * seq_length, embedding_dim).clone().to(solutions.device)
 
         # get index according to the solutions
-        visited_time = torch.zeros((batch_size,seq_length),device = solutions.device)
+        visited_time = torch.zeros((batch_size, seq_length), device=solutions.device)
 
-        pre = torch.zeros((batch_size),device = solutions.device).long()
+        pre = torch.zeros((batch_size), device=solutions.device).long()
 
         arange = torch.arange(batch_size)
-        if clac_stacks:
-            stacks = torch.zeros(batch_size, valid_half_size + 1, device = solutions.device) - 0.01 # fix bug: topk is not stable sorting
-            top2 = torch.zeros(batch_size, seq_length, 2,device = solutions.device).long()
-            stacks[arange, pre] = 0  # fix bug: topk is not stable sorting
 
-        # padding not-inserted nodes
-        # start_padding_p = seq_length - dy_size + dy_t
-        # end_padding_p = int(seq_length - dy_size + dy_size / 2)
-        # start_padding_d = end_padding_p + dy_t
-        # end_padding_d = seq_length - dy_size + dy_size
-        # padding_pos = torch.zeros((batch_size, seq_length, embedding_dim),device = solutions.device)  # this one
-        # padding_cur_dis = torch.zeros((batch_size, seq_length),device = solutions.device).long() + 1e5
 
         for i in range(valid_seq_length):
-            # # find the nearest node for padding not-inserted pickup nodes
-            # coor_1 = x[arange, start_padding_p:end_padding_p, :]
-            # coor_2 = x[arange, pre, :].unsqueeze(1).expand(-1, int(dy_size/2-dy_t), -1)
-            # distance_cur = torch.norm(coor_1 - coor_2, p=2, dim=2).to(solutions.device)
-            # min_dis = torch.min(padding_cur_dis[:, start_padding_p:end_padding_p], distance_cur[:, :]).to(solutions.device)
-            # mask = (distance_cur[:, :] < padding_cur_dis[:, start_padding_p:end_padding_p]).unsqueeze(2).expand(-1, -1, embedding_dim).to(solutions.device)
-            # expanded_mask = torch.zeros_like(padding_pos, dtype=torch.bool).to(solutions.device)
-            # expanded_mask[:, start_padding_p:end_padding_p] = mask
-            # pre_exp = pre.unsqueeze(1).unsqueeze(2).expand(-1, seq_length, embedding_dim)
-            # padding_pos = torch.where(expanded_mask, pre_exp, padding_pos)
-            # padding_cur_dis[:, start_padding_p:end_padding_p] = min_dis
-            # # find the nearest node for padding not-inserted delivery nodes
-            # coor_1 = x[arange, start_padding_d:end_padding_d, :]
-            # coor_2 = x[arange, pre, :].unsqueeze(1).expand(-1, int(dy_size/2-dy_t), -1)
-            # distance_cur = torch.norm(coor_1 - coor_2, p=2, dim=2).to(solutions.device)
-            # min_dis = torch.min(padding_cur_dis[:, start_padding_d:end_padding_d], distance_cur[:, :]).to(solutions.device)
-            # mask = (distance_cur[:, :] < padding_cur_dis[:, start_padding_d:end_padding_d]).unsqueeze(2).expand(-1, -1, embedding_dim).to(solutions.device)
-            # expanded_mask = torch.zeros_like(padding_pos, dtype=torch.bool).to(solutions.device)
-            # expanded_mask[:, start_padding_d:end_padding_d] = mask
-            # pre_exp = pre.unsqueeze(1).unsqueeze(2).expand(-1, seq_length, embedding_dim)
-            # padding_pos = torch.where(expanded_mask, pre_exp, padding_pos)
-            # padding_cur_dis[:, start_padding_d:end_padding_d] = min_dis
 
             # calculate visited_time
-            current_nodes = solutions[arange,pre]
-            visited_time[arange,current_nodes] = i+1
-            pre = solutions[arange,pre]
+            current_nodes = solutions[arange, pre]
+            visited_time[arange, current_nodes] = i + 1
+            pre = solutions[arange, pre]
 
-            if clac_stacks:
-                index1 = (current_nodes <= valid_half_size)& (current_nodes > 0)
-                index2 = (current_nodes > valid_half_size)& (current_nodes > 0)
-                if index1.any():
-                    stacks[index1, current_nodes[index1]] = i + 1
-                if (index2).any():
-                    stacks[index2, current_nodes[index2] - valid_half_size] = -0.01  # fix bug: topk is not stable sorting
-                top2[arange, current_nodes] = stacks.topk(2)[1]
+        index = (visited_time % valid_seq_length).long()
 
 
-        index = (visited_time % valid_seq_length).long().unsqueeze(-1).expand(batch_size, seq_length, embedding_dim)
+        return index, visited_time.long()
 
+    def precompute_freqs_cis(self, dim: int, index, theta: float = 10000.0):
+        # 生成 token 序列索引 t = [0, 1,..., seq_len-1]
+        t = index.to(torch.float)
 
-        # padding not-inserted nodes to other nodes PE
-        # padding_mask = torch.zeros_like(index, dtype=torch.bool)
-        # padding_mask[:,start_padding_p:end_padding_p,:] = True
-        # padding_mask[:,start_padding_d:end_padding_d,:] = True
-        # index = torch.where(padding_mask, padding_pos, index).long()
-        #index[:,start_padding_p:end_padding_p,:] = int()
-        #index[:, start_padding_d:end_padding_d, :] = int()
+        # 计算词向量元素两两分组之后，每组元素对应的旋转角度\theta_i
+        freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim))
+        freqs = freqs.unsqueeze(0).expand(t.size(0), -1).to(index.device)
 
+        # freqs.shape = [seq_len, dim // 2]
+        freqs = torch.matmul(t.unsqueeze(2), freqs.unsqueeze(1))   # 计算m * \theta
 
-        # make PE return
-        PE = torch.gather(position_enc_new, 1, index)
-
-        # padding not-inserted nodes with mean of PE
-        # valid_pos_enc = position_enc_new[:, :valid_seq_length, :]
-        # pos_enc_mean = torch.mean(valid_pos_enc, dim=1, keepdim=True)
-        # PE[:,start_padding_p:end_padding_p,:] = pos_enc_mean
-        # PE[:,start_padding_d:end_padding_d,:] = pos_enc_mean
-        # # PE[:, start_padding_p, :] = pos_enc_mean[:, 0, :]
-        # # PE[:, start_padding_d, :] = pos_enc_mean[:, 0, :]
-    
-
-        return PE, visited_time.long(), top2 if clac_stacks else None
-
+        # 计算结果是个复数向量
+        # 假设 freqs = [x, y]
+        # 则 freqs_cis = [cos(x) + sin(x)i, cos(y) + sin(y)i]
+        freqs_cis = torch.polar(torch.ones_like(freqs), freqs)
+        return freqs_cis
         
-    def forward(self, x, solutions, step_info, clac_stacks = False):
-        pos_enc, visited_time, top2 = self.position_encoding(x, solutions, step_info, self.embedding_dim, clac_stacks)
-        x_embedding = self.embedder(x)   
-        return  x_embedding, pos_enc, visited_time, top2
+    def forward(self, x, solutions, step_info):
+        index_for_freqs, visited_time = self.get_visited_time(solutions, step_info)
+        freqs_cis = self.precompute_freqs_cis(self.embedding_dim, index_for_freqs)
+
+        x_embedding = self.embedder(x)
+        return  x_embedding, freqs_cis, visited_time
     
 class MultiHeadAttentionLayerforCritic(nn.Sequential):
 

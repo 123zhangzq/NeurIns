@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from nets.graph_layers import MultiHeadEncoder_1, MultiHeadEncoder, MultiHeadDecoder, EmbeddingNet, MultiHeadPosCompat
+from nets.graph_layers import AttentionEncoder_1, MultiHeadEncoder, MultiHeadDecoder, EmbeddingNet, MultiHeadPosCompat
 
 class mySequential(nn.Sequential):
     def forward(self, *inputs):
@@ -47,20 +47,20 @@ class Actor(nn.Module):
                             self.seq_length)
         
         self.encoder = mySequential(*(
-                MultiHeadEncoder_1(self.n_heads_actor,
+                AttentionEncoder_1(1,
                                 self.embedding_dim,
                                 self.hidden_dim,
                                 self.normalization,
                                 )
-            for _ in range(self.n_layers))) # for NFEs
+            for _ in range(1))) # for first layer of NFEs
 
-        # self.encoder_l2n = mySequential(*(
-        #         MultiHeadEncoder(self.n_heads_actor,
-        #                         self.embedding_dim,
-        #                         self.hidden_dim,
-        #                         self.normalization,
-        #                         )
-        #     for _ in range(self.n_layers))) # for the following layers of NFEs
+        self.encoder_l2n = mySequential(*(
+                MultiHeadEncoder(self.n_heads_actor,
+                                self.embedding_dim,
+                                self.hidden_dim,
+                                self.normalization,
+                                )
+            for _ in range(self.n_layers))) # for the following layers of NFEs
 
         self.pos_encoder = MultiHeadPosCompat(self.n_heads_actor, 
                                 self.embedding_dim, 
@@ -82,13 +82,12 @@ class Actor(nn.Module):
 
         # the embedded input x
         bs, gs, in_d = x_in.size()
-
-        h_embed, h_pos, visited_time, top2 = self.embedder(x_in, solution, step_info, self.clac_stacks)
+        h_embed, freqs_cis, visited_time = self.embedder(x_in, solution, step_info)
         
         # pass through encoder
-        pos_em = self.pos_encoder(h_pos)
-        h_em = self.encoder(h_embed, pos_em)[0]
-
+        h_em, freqs_cis = self.encoder(h_embed, freqs_cis)
+        h_em = self.encoder_l2n(h_em)
+        a = 1
         
         if only_critic:
             return (h_em)
@@ -103,7 +102,6 @@ class Actor(nn.Module):
                                                 action_his,
                                                 step_info,
                                                 x_in,
-                                                top2,
                                                 visited_order_map,
                                                 epsilon_info,
                                                 fixed_action,
