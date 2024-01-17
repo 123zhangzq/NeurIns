@@ -95,6 +95,7 @@ class Actor(nn.Module):
 
         visited_order_map = problem.get_visited_order_map(visited_time,step_info)
         del visited_time
+
         
         # pass through decoder
         action, log_ll, entropy, CI_action = self.decoder(problem,
