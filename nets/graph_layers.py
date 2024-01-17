@@ -919,7 +919,7 @@ class EmbeddingNet(nn.Module):
         self.embedding_dim = embedding_dim
         self.embedder = nn.Linear(node_dim, embedding_dim, bias = False)
 
-        self.pattern = self.cyclic_position_encoding_pattern(2 * seq_length, embedding_dim)
+        self.pattern = self.position_encoding_pattern(2 * seq_length, embedding_dim)
         
         self.init_parameters()
 
@@ -935,35 +935,62 @@ class EmbeddingNet(nn.Module):
     def basecos(self, x, T, fai = 0):
         return np.cos(2 * np.pi / T * np.abs(np.mod(x, 2 * T) - T) + fai)
     
-    def cyclic_position_encoding_pattern(self, n_position, emb_dim, mean_pooling = True):
-        
-        Td_set = np.linspace(np.power(n_position, 1 / (emb_dim // 2)), n_position, emb_dim // 2, dtype = 'int')
+    # def cyclic_position_encoding_pattern(self, n_position, emb_dim, mean_pooling = True):
+    #
+    #     Td_set = np.linspace(np.power(n_position, 1 / (emb_dim // 2)), n_position, emb_dim // 2, dtype = 'int')
+    #     x = np.zeros((n_position, emb_dim))
+    #
+    #     for i in range(emb_dim):
+    #         Td = Td_set[i //3 * 3 + 1] if  (i //3 * 3 + 1) < (emb_dim // 2) else Td_set[-1]
+    #         fai = 0 if i <= (emb_dim // 2) else  2 * np.pi * ((-i + (emb_dim // 2)) / (emb_dim // 2))
+    #         longer_pattern = np.arange(0, np.ceil((n_position) / Td) * Td, 0.01)
+    #         if i % 2 ==1:
+    #             x[:,i] = self.basecos(longer_pattern, Td, fai)[np.linspace(0, len(longer_pattern), n_position, dtype = 'int', endpoint = False)]
+    #         else:
+    #             x[:,i] = self.basesin(longer_pattern, Td, fai)[np.linspace(0, len(longer_pattern), n_position, dtype = 'int', endpoint = False)]
+    #
+    #     pattern = torch.from_numpy(x).type(torch.FloatTensor)
+    #     pattern_sum = torch.zeros_like(pattern)
+    #
+    #     # averaging the adjacient embeddings if needed (optional, almost the same performance)
+    #     arange = torch.arange(n_position)
+    #     pooling = [0] if not mean_pooling else[-2, -1, 0, 1, 2]
+    #     time = 0
+    #     for i in pooling:
+    #         time += 1
+    #         index = (arange + i + n_position) % n_position
+    #         pattern_sum += pattern.gather(0, index.view(-1,1).expand_as(pattern))
+    #     pattern = 1. / time * pattern_sum - pattern.mean(0)
+    #     #### ----
+    #
+    #     return pattern
+
+    def position_encoding_pattern(self, n_position, emb_dim, mean_pooling=True):
+
+        Td_set = np.linspace(np.power(n_position, 1 / (emb_dim // 2)), n_position, emb_dim // 2, dtype='int')
         x = np.zeros((n_position, emb_dim))
-         
-        for i in range(emb_dim):
-            Td = Td_set[i //3 * 3 + 1] if  (i //3 * 3 + 1) < (emb_dim // 2) else Td_set[-1]
-            fai = 0 if i <= (emb_dim // 2) else  2 * np.pi * ((-i + (emb_dim // 2)) / (emb_dim // 2))
-            longer_pattern = np.arange(0, np.ceil((n_position) / Td) * Td, 0.01)
-            if i % 2 ==1:
-                x[:,i] = self.basecos(longer_pattern, Td, fai)[np.linspace(0, len(longer_pattern), n_position, dtype = 'int', endpoint = False)]
-            else:
-                x[:,i] = self.basesin(longer_pattern, Td, fai)[np.linspace(0, len(longer_pattern), n_position, dtype = 'int', endpoint = False)]
-                
-        pattern = torch.from_numpy(x).type(torch.FloatTensor)
+
+        pattern = torch.zeros((n_position, emb_dim))
+        X = torch.arange(n_position, dtype=torch.float32).reshape(
+            -1, 1) / torch.pow(10000, torch.arange(
+            0, emb_dim, 2, dtype=torch.float32) / emb_dim)
+        pattern[:, 0::2] = torch.sin(X)
+        pattern[:, 1::2] = torch.cos(X)
+
         pattern_sum = torch.zeros_like(pattern)
 
         # averaging the adjacient embeddings if needed (optional, almost the same performance)
         arange = torch.arange(n_position)
-        pooling = [0] if not mean_pooling else[-2, -1, 0, 1, 2]
+        pooling = [0] if not mean_pooling else [-2, -1, 0, 1, 2]
         time = 0
         for i in pooling:
             time += 1
             index = (arange + i + n_position) % n_position
-            pattern_sum += pattern.gather(0, index.view(-1,1).expand_as(pattern))
+            pattern_sum += pattern.gather(0, index.view(-1, 1).expand_as(pattern))
         pattern = 1. / time * pattern_sum - pattern.mean(0)
-        #### ---- 
-        
-        return pattern    
+        #### ----
+
+        return pattern
 
     def position_encoding(self, x, solutions, step_info, embedding_dim, clac_stacks = False):
         # size info
