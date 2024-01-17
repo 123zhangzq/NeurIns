@@ -726,7 +726,8 @@ class MultiHeadDecoder(nn.Module):
         GI_action = torch.cat((action_removal.view(bs, -1), p_selected_GI, d_selected_GI), -1)  # pair: no_head bs, 2
         del visited_order_map, mask_table
 
-
+        if not do_sample and (dy_size//2 == dy_t+1):
+            return action, log_ll, entropy, GI_action
         return action, log_ll, entropy, GI_action
 
 
