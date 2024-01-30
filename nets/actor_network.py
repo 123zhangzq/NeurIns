@@ -52,7 +52,7 @@ class Actor(nn.Module):
                                 self.hidden_dim,
                                 self.normalization,
                                 )
-            for _ in range(1))) # for first layer of NFEs
+            for _ in range(self.n_layers))) # for first layer of NFEs
 
         self.encoder_l2n = mySequential(*(
                 MultiHeadEncoder(self.n_heads_actor,
@@ -85,9 +85,9 @@ class Actor(nn.Module):
         h_embed, freqs_cis, visited_time = self.embedder(x_in, solution, step_info)
         
         # pass through encoder
-        h_em, freqs_cis = self.encoder(h_embed, freqs_cis)
-        h_em = self.encoder_l2n(h_em)
-        a = 1
+        h_em = self.encoder(h_embed, freqs_cis)[0]
+       # h_em = self.encoder_l2n(h_em)
+
         
         if only_critic:
             return (h_em)
